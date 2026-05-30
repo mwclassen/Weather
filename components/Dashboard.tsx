@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { AlertCircle, Terminal } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { CitySearch } from "./CitySearch";
 import { FavoritesBar } from "./FavoritesBar";
 import { ForecastHero, ForecastHeroSkeleton } from "./ForecastHero";
 import { ForecastGrid, ForecastGridSkeleton } from "./ForecastGrid";
 import { TempSparkline } from "./TempSparkline";
+import { ThemeToggle } from "./ThemeToggle";
 import { TodaySunEvents } from "./TodaySunEvents";
 import { UnitToggle } from "./UnitToggle";
 import { useForecast } from "@/hooks/useForecast";
@@ -81,13 +82,8 @@ export function Dashboard() {
   return (
     <div className="min-h-screen grid-bg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <Terminal className="w-5 h-5 text-accent" />
-            <span className="font-mono text-sm text-text-muted">
-              FORECAST<span className="text-accent">{"//"}</span>15D
-            </span>
-          </div>
+        <div className="flex flex-row flex-nowrap items-center justify-end gap-2">
+          <ThemeToggle />
           <UnitToggle
             unit={unit}
             onChange={handleUnitChange}
@@ -109,17 +105,6 @@ export function Dashboard() {
             Supabase not configured — favorites and unit sync disabled. Add env
             vars from .env.local.example
           </p>
-        )}
-
-        {!selectedCity && (
-          <div className="text-center py-24 space-y-4">
-            <p className="font-mono text-accent text-lg">
-              &gt; await city.input()
-            </p>
-            <p className="text-text-muted text-sm max-w-md mx-auto">
-              Search for any city to load a 15-day forecast from Open-Meteo.
-            </p>
-          </div>
         )}
 
         {selectedCity && isLoading && (
@@ -177,13 +162,6 @@ export function Dashboard() {
           >
             Open-Meteo
           </a>
-          {isSupabaseConfigured() && (
-            <>
-              {" "}
-              · Storage:{" "}
-              <span className="text-accent-dim">Supabase</span>
-            </>
-          )}
         </footer>
       </div>
     </div>

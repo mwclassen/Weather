@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Droplets, Star, Wind } from "lucide-react";
 import {
   formatCityLabel,
@@ -10,6 +11,11 @@ import {
   type GeoResult,
   type TemperatureUnit,
 } from "@/lib/open-meteo";
+import {
+  formatCoordinates,
+  getDeviceMapUrl,
+  openDeviceMap,
+} from "@/lib/maps";
 import { WeatherIcon } from "./WeatherIcon";
 
 export function ForecastHero({
@@ -29,14 +35,64 @@ export function ForecastHero({
 }) {
   const { current, timezone } = forecast;
   const unitLabel = unit === "fahrenheit" ? "°F" : "°C";
-
-  const localTime = current
-    ? formatTime(current.time, timezone)
-    : formatTime(new Date().toISOString(), timezone);
+  const localTime = useLiveLocalTime(timezone);
 
   return (
     <header className="rounded-xl border border-border bg-bg-card/80 backdrop-blur p-6 sm:p-8">
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+      {current ? (
+        <>
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2 sm:gap-x-4 w-full">
+            <div className="flex items-center gap-2 min-w-0 justify-self-start">
+              <h1 className="text-xl sm:text-3xl font-semibold text-text truncate">
+                {city.name}
+              </h1>
+              <button
+                type="button"
+                onClick={onToggleFavorite}
+                disabled={savingFavorite}
+                className="p-1 rounded transition-colors hover:bg-accent/10 disabled:opacity-50 shrink-0"
+                aria-label={
+                  isFavorite ? "Remove from favorites" : "Add to favorites"
+                }
+              >
+                <Star
+                  className={`w-5 h-5 ${
+                    isFavorite
+                      ? "fill-accent text-accent"
+                      : "text-text-muted hover:text-accent"
+                  }`}
+                />
+              </button>
+            </div>
+
+            <span className="font-mono text-2xl sm:text-3xl font-bold text-accent tabular-nums justify-self-center px-1">
+              {localTime}
+            </span>
+
+            <div className="flex items-center gap-2 sm:gap-3 justify-self-end">
+              <WeatherIcon
+                type={weatherCodeToIcon(current.weatherCode)}
+                className="w-10 h-10 sm:w-12 sm:h-12 shrink-0"
+              />
+              <span className="font-mono text-2xl sm:text-3xl font-bold text-accent tabular-nums">
+                {Math.round(current.temperature)}
+                <span className="text-lg sm:text-xl text-accent-dim">
+                  {unitLabel}
+                </span>
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mt-2">
+            <p className="font-mono text-sm text-text-muted truncate">
+              {formatCityLabel(city)}
+            </p>
+            <p className="font-mono text-sm text-text-muted sm:text-right">
+              {weatherCodeToLabel(current.weatherCode)}
+            </p>
+          </div>
+        </>
+      ) : (
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl sm:text-3xl font-semibold text-text">
@@ -47,7 +103,9 @@ export function ForecastHero({
               onClick={onToggleFavorite}
               disabled={savingFavorite}
               className="p-1 rounded transition-colors hover:bg-accent/10 disabled:opacity-50"
-              aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+              aria-label={
+                isFavorite ? "Remove from favorites" : "Add to favorites"
+              }
             >
               <Star
                 className={`w-5 h-5 ${
@@ -61,29 +119,8 @@ export function ForecastHero({
           <p className="font-mono text-sm text-text-muted mt-1">
             {formatCityLabel(city)}
           </p>
-          <p className="font-mono text-xs text-text-dim mt-2">
-            LOCAL {localTime} · TZ/{timezone}
-          </p>
         </div>
-
-        {current && (
-          <div className="flex items-center gap-4 sm:gap-6">
-            <WeatherIcon
-              type={weatherCodeToIcon(current.weatherCode)}
-              className="w-14 h-14 sm:w-16 sm:h-16"
-            />
-            <div>
-              <p className="font-mono text-4xl sm:text-5xl font-bold text-accent tabular-nums">
-                {Math.round(current.temperature)}
-                <span className="text-2xl text-accent-dim">{unitLabel}</span>
-              </p>
-              <p className="font-mono text-sm text-text-muted mt-1">
-                {weatherCodeToLabel(current.weatherCode)}
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
+      )}
 
       {current && (
         <div className="flex gap-6 mt-6 pt-4 border-t border-border font-mono text-xs text-text-muted">
@@ -95,13 +132,42 @@ export function ForecastHero({
             <Wind className="w-3.5 h-3.5 text-accent-dim" />
             {Math.round(current.windSpeed)} km/h wind
           </span>
-          <span className="text-text-dim">
-            {forecast.latitude.toFixed(2)}°, {forecast.longitude.toFixed(2)}°
-          </span>
+          <a
+            href={getDeviceMapUrl(
+              forecast.latitude,
+              forecast.longitude,
+              city.name
+            )}
+            onClick={(e) => {
+              e.preventDefault();
+              openDeviceMap(forecast.latitude, forecast.longitude, city.name);
+            }}
+            className="text-text-dim hover:text-accent underline-offset-2 hover:underline transition-colors"
+            title="Open in Maps"
+            aria-label={`Open ${city.name} in Maps (${formatCoordinates(forecast.latitude, forecast.longitude)})`}
+          >
+            {formatCoordinates(forecast.latitude, forecast.longitude)}
+          </a>
         </div>
       )}
     </header>
   );
+}
+
+function useLiveLocalTime(timezone: string): string {
+  const [time, setTime] = useState(() =>
+    formatTime(new Date().toISOString(), timezone)
+  );
+
+  useEffect(() => {
+    const tick = () =>
+      setTime(formatTime(new Date().toISOString(), timezone));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [timezone]);
+
+  return time;
 }
 
 export function ForecastHeroSkeleton() {

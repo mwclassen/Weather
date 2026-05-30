@@ -41,13 +41,13 @@ export function TempSparkline({
       </div>
       <svg
         viewBox={`0 0 ${width} ${height}`}
-        className="w-full h-20"
+        className="w-full h-20 text-accent"
         preserveAspectRatio="none"
       >
         <defs>
           <linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#00d4aa" stopOpacity="0.3" />
-            <stop offset="100%" stopColor="#00d4aa" stopOpacity="0" />
+            <stop offset="0%" stopColor="currentColor" stopOpacity="0.3" />
+            <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
           </linearGradient>
         </defs>
         <polygon
@@ -57,7 +57,7 @@ export function TempSparkline({
         <polyline
           points={points.join(" ")}
           fill="none"
-          stroke="#00d4aa"
+          stroke="currentColor"
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -70,8 +70,7 @@ export function TempSparkline({
               cx={x}
               cy={y}
               r="3"
-              fill="#0a0e14"
-              stroke="#00d4aa"
+              className="fill-bg stroke-accent"
               strokeWidth="2"
             />
           );

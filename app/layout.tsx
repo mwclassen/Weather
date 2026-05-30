@@ -14,9 +14,20 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Forecast // 15-Day",
+  title: "15-Day Forecast",
   description: "15-day weather forecast powered by Open-Meteo",
 };
+
+const themeScript = `
+(function () {
+  try {
+    var t = localStorage.getItem('weather_theme');
+    document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : 'dark');
+  } catch (e) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  }
+})();
+`;
 
 export default function RootLayout({
   children,
@@ -24,7 +35,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body
         className={`${geistSans.variable} ${jetbrainsMono.variable} font-sans antialiased scanline`}
       >

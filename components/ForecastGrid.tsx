@@ -44,9 +44,11 @@ export function ForecastGrid({
         <DayDetailPanel
           forecast={forecast}
           dayIndex={selectedIndex}
+          dayCount={daily.dates.length}
           unit={unit}
           cityName={cityName}
           onClose={() => setSelectedIndex(null)}
+          onDayChange={setSelectedIndex}
         />
       )}
     </>

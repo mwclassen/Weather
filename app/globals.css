@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
-:root {
+:root,
+[data-theme="dark"] {
   --bg: #0a0e14;
   --bg-elevated: #111820;
   --bg-card: #151c26;
@@ -13,6 +14,25 @@
   --text-dim: #4a5a6e;
   --danger: #ff6b6b;
   --warning: #ffd93d;
+  --timeline-night: #0d1520;
+  --on-accent: #0a0e14;
+}
+
+[data-theme="light"] {
+  --bg: #eef1f6;
+  --bg-elevated: #ffffff;
+  --bg-card: #ffffff;
+  --border: #cfd8e3;
+  --border-glow: #008f6f35;
+  --accent: #007a62;
+  --accent-dim: #006652;
+  --text: #1a2332;
+  --text-muted: #5a6778;
+  --text-dim: #8896a8;
+  --danger: #d64545;
+  --warning: #c99700;
+  --timeline-night: #dce3ec;
+  --on-accent: #ffffff;
 }
 
 @theme inline {
@@ -29,10 +49,21 @@
   --font-mono: var(--font-jetbrains-mono);
 }
 
+html {
+  color-scheme: dark;
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+}
+
 body {
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 
 .grid-bg {
@@ -56,6 +87,10 @@ body {
     rgba(0, 0, 0, 0.03) 4px
   );
   z-index: 50;
+}
+
+[data-theme="light"] .scanline::after {
+  display: none;
 }
 
 .glow-border {
@@ -109,4 +144,19 @@ body {
     #ffb34766 75%,
     #1a2838 100%
   );
+}
+
+[data-theme="light"] .daylight-gradient {
+  background: linear-gradient(
+    180deg,
+    #b8cfe0 0%,
+    #87b3d4 25%,
+    #ffd93d88 50%,
+    #ffb34799 75%,
+    #b8cfe0 100%
+  );
+}
+
+.timeline-night {
+  background-color: var(--timeline-night);
 }

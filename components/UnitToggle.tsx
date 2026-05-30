@@ -12,16 +12,17 @@ export function UnitToggle({
   disabled?: boolean;
 }) {
   return (
-    <div className="flex items-center gap-1 font-mono text-xs border border-border rounded-md overflow-hidden">
+    <div className="flex flex-row flex-nowrap items-center shrink-0 font-mono text-xs border border-border rounded-md overflow-hidden">
       <button
         type="button"
         disabled={disabled}
         onClick={() => onChange("celsius")}
-        className={`px-3 py-1.5 transition-colors ${
+        className={`px-2 sm:px-3 py-1.5 transition-colors ${
           unit === "celsius"
-            ? "bg-accent text-bg font-semibold"
+            ? "bg-accent font-semibold"
             : "text-text-muted hover:text-text"
         }`}
+        style={unit === "celsius" ? { color: "var(--on-accent)" } : undefined}
       >
         °C
       </button>
@@ -29,11 +30,12 @@ export function UnitToggle({
         type="button"
         disabled={disabled}
         onClick={() => onChange("fahrenheit")}
-        className={`px-3 py-1.5 transition-colors ${
+        className={`px-2 sm:px-3 py-1.5 transition-colors ${
           unit === "fahrenheit"
-            ? "bg-accent text-bg font-semibold"
+            ? "bg-accent font-semibold"
             : "text-text-muted hover:text-text"
         }`}
+        style={unit === "fahrenheit" ? { color: "var(--on-accent)" } : undefined}
       >
         °F
       </button>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import {
   X,
   Droplets,
@@ -8,6 +8,8 @@ import {
   Thermometer,
   CloudRain,
   SunMedium,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import {
   formatDateLong,
@@ -19,33 +21,58 @@ import {
   type ForecastData,
   type TemperatureUnit,
 } from "@/lib/open-meteo";
+import { useSwipeNavigation } from "@/hooks/useSwipeNavigation";
 import { WeatherIcon } from "./WeatherIcon";
 import { HourlyTimeline } from "./HourlyTimeline";
 
 export function DayDetailPanel({
   forecast,
   dayIndex,
+  dayCount,
   unit,
   cityName,
   onClose,
+  onDayChange,
 }: {
   forecast: ForecastData;
   dayIndex: number;
+  dayCount: number;
   unit: TemperatureUnit;
   cityName: string;
   onClose: () => void;
+  onDayChange: (index: number) => void;
 }) {
+  const panelRef = useRef<HTMLDivElement>(null);
   const { timezone } = forecast;
   const detail = getDayDetail(forecast, dayIndex);
   const unitLabel = unit === "fahrenheit" ? "°F" : "°C";
   const today = isToday(detail.date, timezone);
   const tempSpread = Math.round(detail.tempMax - detail.tempMin);
 
+  const canGoPrev = dayIndex > 0;
+  const canGoNext = dayIndex < dayCount - 1;
+
+  const goPrevious = useCallback(() => {
+    if (canGoPrev) onDayChange(dayIndex - 1);
+  }, [canGoPrev, dayIndex, onDayChange]);
+
+  const goNext = useCallback(() => {
+    if (canGoNext) onDayChange(dayIndex + 1);
+  }, [canGoNext, dayIndex, onDayChange]);
+
+  const swipe = useSwipeNavigation({
+    onPrevious: goPrevious,
+    onNext: goNext,
+    enabled: canGoPrev || canGoNext,
+  });
+
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
+      if (e.key === "ArrowLeft") goPrevious();
+      if (e.key === "ArrowRight") goNext();
     },
-    [onClose]
+    [onClose, goPrevious, goNext]
   );
 
   useEffect(() => {
@@ -56,6 +83,10 @@ export function DayDetailPanel({
       document.body.style.overflow = "";
     };
   }, [handleKeyDown]);
+
+  useEffect(() => {
+    panelRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  }, [dayIndex]);
 
   return (
     <div
@@ -71,30 +102,57 @@ export function DayDetailPanel({
         aria-label="Close"
       />
 
-      <div className="relative w-full sm:max-w-2xl md:max-w-4xl lg:max-w-5xl max-h-[92vh] sm:max-h-[88vh] overflow-y-auto rounded-t-xl sm:rounded-xl border border-border bg-bg-elevated shadow-2xl animate-fade-up">
+      <div
+        ref={panelRef}
+        className="relative w-full sm:max-w-2xl md:max-w-4xl lg:max-w-5xl max-h-[92vh] sm:max-h-[88vh] overflow-y-auto rounded-t-xl sm:rounded-xl border border-border bg-bg-elevated shadow-2xl animate-fade-up touch-pan-y"
+        onTouchStart={swipe.onTouchStart}
+        onTouchEnd={swipe.onTouchEnd}
+      >
         <div className="sticky top-0 flex items-center justify-between border-b border-border bg-bg-elevated/95 backdrop-blur px-5 sm:px-8 py-4 z-10">
-          <div>
-            <p className="font-mono text-[10px] text-accent uppercase tracking-wider">
-              {today ? "Today" : "Day detail"} · {cityName}
-            </p>
-            <h2
-              id="day-detail-title"
-              className="text-lg sm:text-xl font-semibold text-text mt-0.5"
-            >
-              {formatDateLong(detail.date, timezone)}
-            </h2>
+          <div className="flex items-center gap-2 min-w-0">
+            <NavButton
+              direction="prev"
+              disabled={!canGoPrev}
+              onClick={goPrevious}
+              label="Previous day"
+            />
+            <div className="min-w-0">
+              <p className="font-mono text-[10px] text-accent uppercase tracking-wider">
+                {today ? "Today" : "Day detail"} · {cityName}
+              </p>
+              <h2
+                id="day-detail-title"
+                className="text-lg sm:text-xl font-semibold text-text mt-0.5 truncate"
+              >
+                {formatDateLong(detail.date, timezone)}
+              </h2>
+              <p className="font-mono text-[10px] text-text-dim mt-0.5">
+                Day {dayIndex + 1} of {dayCount} · swipe or use arrows
+              </p>
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 rounded-lg border border-border text-text-muted hover:text-text hover:border-accent/50 transition-colors"
-            aria-label="Close"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1 shrink-0">
+            <NavButton
+              direction="next"
+              disabled={!canGoNext}
+              onClick={goNext}
+              label="Next day"
+            />
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 rounded-lg border border-border text-text-muted hover:text-text hover:border-accent/50 transition-colors"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
-        <div className="p-5 sm:p-8 space-y-6 sm:space-y-8">
+        <div
+          key={dayIndex}
+          className="p-5 sm:p-8 space-y-6 sm:space-y-8 animate-fade-up"
+        >
           <div className="flex items-center gap-5 sm:gap-8">
             <WeatherIcon
               type={weatherCodeToIcon(detail.weatherCode)}
@@ -202,6 +260,31 @@ export function DayDetailPanel({
         </div>
       </div>
     </div>
+  );
+}
+
+function NavButton({
+  direction,
+  disabled,
+  onClick,
+  label,
+}: {
+  direction: "prev" | "next";
+  disabled: boolean;
+  onClick: () => void;
+  label: string;
+}) {
+  const Icon = direction === "prev" ? ChevronLeft : ChevronRight;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      className="p-2 rounded-lg border border-border text-text-muted hover:text-text hover:border-accent/50 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+    >
+      <Icon className="w-5 h-5" />
+    </button>
   );
 }
 

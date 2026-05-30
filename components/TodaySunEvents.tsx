@@ -204,7 +204,7 @@ export function TodaySunEvents({ forecast }: { forecast: ForecastData }) {
         <div className="relative">
           <div className="relative h-14 sm:h-16 rounded-lg overflow-hidden border border-border/80">
             <div
-              className="absolute inset-y-0 left-0 bg-[#0d1520]"
+              className="absolute inset-y-0 left-0 timeline-night"
               style={{ width: `${metrics.sunrisePercent}%` }}
             />
             <div
@@ -215,7 +215,7 @@ export function TodaySunEvents({ forecast }: { forecast: ForecastData }) {
               }}
             />
             <div
-              className="absolute inset-y-0 right-0 bg-[#0d1520]"
+              className="absolute inset-y-0 right-0 timeline-night"
               style={{
                 width: `${100 - metrics.sunsetPercent}%`,
               }}
