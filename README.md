@@ -66,3 +66,4 @@ No API key is required. Data is free for non-commercial use — see [Open-Meteo 
 | `npm run build`| Production build     |
 | `npm run start`| Production server    |
 | `npm run lint` | ESLint               |
+
