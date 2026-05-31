@@ -1,5 +1,36 @@
 export type TemperatureUnit = "celsius" | "fahrenheit";
 
+export function isImperial(unit: TemperatureUnit): boolean {
+  return unit === "fahrenheit";
+}
+
+export function temperatureUnitLabel(unit: TemperatureUnit): string {
+  return unit === "fahrenheit" ? "°F" : "°C";
+}
+
+export function formatWindSpeed(
+  speed: number,
+  unit: TemperatureUnit
+): string {
+  return isImperial(unit)
+    ? `${Math.round(speed)} mph`
+    : `${Math.round(speed)} km/h`;
+}
+
+export function formatPrecipSum(
+  amount: number,
+  unit: TemperatureUnit
+): string {
+  if (isImperial(unit)) {
+    return `${amount.toFixed(2)} in`;
+  }
+  return `${amount.toFixed(1)} mm`;
+}
+
+export function precipAmountLabel(unit: TemperatureUnit): string {
+  return isImperial(unit) ? "in" : "mm";
+}
+
 export interface GeoResult {
   id: number;
   name: string;
@@ -122,6 +153,8 @@ export async function fetchForecast(
     forecast_days: "15",
     timezone: "auto",
     temperature_unit: unit,
+    windspeed_unit: isImperial(unit) ? "mph" : "kmh",
+    precipitation_unit: isImperial(unit) ? "inch" : "mm",
     current: "temperature_2m,relative_humidity_2m,weathercode,windspeed_10m",
     daily: [
       "weathercode",

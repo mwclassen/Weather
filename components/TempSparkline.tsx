@@ -1,6 +1,6 @@
 "use client";
 
-import type { TemperatureUnit } from "@/lib/open-meteo";
+import { temperatureUnitLabel, type TemperatureUnit } from "@/lib/open-meteo";
 
 export function TempSparkline({
   temps,
@@ -25,7 +25,7 @@ export function TempSparkline({
     return `${x},${y}`;
   });
 
-  const unitLabel = unit === "fahrenheit" ? "°F" : "°C";
+  const unitLabel = temperatureUnitLabel(unit);
 
   return (
     <div className="rounded-lg border border-border bg-bg-card p-4">

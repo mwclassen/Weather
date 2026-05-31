@@ -2,6 +2,7 @@
 
 import {
   formatHour,
+  temperatureUnitLabel,
   weatherCodeToIcon,
   type DayDetail,
   type TemperatureUnit,
@@ -24,7 +25,7 @@ export function HourlyTimeline({
   const min = Math.min(...temps);
   const max = Math.max(...temps);
   const range = max - min || 1;
-  const unitLabel = unit === "fahrenheit" ? "°F" : "°C";
+  const unitLabel = temperatureUnitLabel(unit);
 
   return (
     <div className="space-y-3">

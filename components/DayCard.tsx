@@ -2,7 +2,9 @@
 
 import {
   formatDate,
+  formatWindSpeed,
   isToday,
+  temperatureUnitLabel,
   weatherCodeToIcon,
   weatherCodeToLabel,
   type TemperatureUnit,
@@ -36,7 +38,7 @@ export function DayCard({
   onSelect?: () => void;
 }) {
   const today = isToday(date, timezone);
-  const unitLabel = unit === "fahrenheit" ? "°F" : "°C";
+  const unitLabel = temperatureUnitLabel(unit);
 
   return (
     <button
@@ -83,7 +85,7 @@ export function DayCard({
         </div>
         <div className="flex items-center gap-1.5">
           <Wind className="w-3 h-3 text-accent-dim" />
-          <span>{Math.round(wind)} km/h</span>
+          <span>{formatWindSpeed(wind, unit)}</span>
         </div>
       </div>
       <p className="font-mono text-[9px] text-text-dim text-center mt-1">

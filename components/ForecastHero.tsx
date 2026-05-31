@@ -5,6 +5,8 @@ import { Droplets, Star, Wind } from "lucide-react";
 import {
   formatCityLabel,
   formatTime,
+  formatWindSpeed,
+  temperatureUnitLabel,
   weatherCodeToIcon,
   weatherCodeToLabel,
   type ForecastData,
@@ -34,7 +36,7 @@ export function ForecastHero({
   savingFavorite: boolean;
 }) {
   const { current, timezone } = forecast;
-  const unitLabel = unit === "fahrenheit" ? "°F" : "°C";
+  const unitLabel = temperatureUnitLabel(unit);
   const localTime = useLiveLocalTime(timezone);
 
   return (
@@ -130,7 +132,7 @@ export function ForecastHero({
           </span>
           <span className="flex items-center gap-1.5">
             <Wind className="w-3.5 h-3.5 text-accent-dim" />
-            {Math.round(current.windSpeed)} km/h wind
+            {formatWindSpeed(current.windSpeed, unit)} wind
           </span>
           <a
             href={getDeviceMapUrl(

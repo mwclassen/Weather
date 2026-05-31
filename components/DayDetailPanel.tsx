@@ -13,9 +13,13 @@ import {
 } from "lucide-react";
 import {
   formatDateLong,
+  formatPrecipSum,
   formatTime,
+  formatWindSpeed,
   getDayDetail,
   isToday,
+  precipAmountLabel,
+  temperatureUnitLabel,
   weatherCodeToIcon,
   weatherCodeToLabel,
   type ForecastData,
@@ -45,7 +49,7 @@ export function DayDetailPanel({
   const panelRef = useRef<HTMLDivElement>(null);
   const { timezone } = forecast;
   const detail = getDayDetail(forecast, dayIndex);
-  const unitLabel = unit === "fahrenheit" ? "°F" : "°C";
+  const unitLabel = temperatureUnitLabel(unit);
   const today = isToday(detail.date, timezone);
   const tempSpread = Math.round(detail.tempMax - detail.tempMin);
 
@@ -187,13 +191,13 @@ export function DayDetailPanel({
             />
             <StatCard
               icon={<CloudRain className="w-4 h-4" />}
-              label="Precip amount"
-              value={`${detail.precipSum?.toFixed(1) ?? 0} mm`}
+              label={`Rainfall (${precipAmountLabel(unit)})`}
+              value={formatPrecipSum(detail.precipSum ?? 0, unit)}
             />
             <StatCard
               icon={<Wind className="w-4 h-4" />}
               label="Max wind"
-              value={`${Math.round(detail.windSpeedMax)} km/h`}
+              value={formatWindSpeed(detail.windSpeedMax, unit)}
             />
             <StatCard
               icon={<SunMedium className="w-4 h-4" />}
@@ -249,7 +253,7 @@ export function DayDetailPanel({
                         {slot.precipProbability ?? 0}%
                       </span>
                       <span className="text-text-dim text-right">
-                        {Math.round(slot.windSpeed)} km/h
+                        {formatWindSpeed(slot.windSpeed, unit)}
                       </span>
                     </li>
                   ))}
