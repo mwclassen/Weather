@@ -1,14 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Search, Loader2 } from "lucide-react";
+import { Crosshair, Loader2, Search } from "lucide-react";
 import { useCitySearch } from "@/hooks/useCitySearch";
 import { formatCityLabel, type GeoResult } from "@/lib/open-meteo";
 
 export function CitySearch({
   onSelect,
+  onUseLocation,
+  locating = false,
 }: {
   onSelect: (city: GeoResult) => void;
+  onUseLocation?: () => void;
+  locating?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [debounced, setDebounced] = useState("");
@@ -87,6 +91,22 @@ export function CitySearch({
           className="flex-1 bg-transparent font-mono text-sm text-text placeholder:text-text-dim outline-none"
           autoComplete="off"
         />
+        {onUseLocation && (
+          <button
+            type="button"
+            onClick={onUseLocation}
+            disabled={locating}
+            className="flex items-center justify-center min-w-9 min-h-9 rounded text-text-muted hover:text-accent hover:bg-accent/10 disabled:opacity-50 transition-colors touch-manipulation shrink-0"
+            aria-label="Use current location"
+            title="Use current location"
+          >
+            {locating ? (
+              <Loader2 className="w-4 h-4 animate-spin text-accent" />
+            ) : (
+              <Crosshair className="w-4 h-4" />
+            )}
+          </button>
+        )}
         <span className="font-mono text-[10px] text-text-dim hidden sm:inline">
           GEO:{"//"}open-meteo
         </span>

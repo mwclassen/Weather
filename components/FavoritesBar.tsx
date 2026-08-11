@@ -52,7 +52,7 @@ export function FavoritesBar({
             <button
               type="button"
               onClick={() => onRemove(city.id)}
-              className="pr-2 opacity-0 group-hover:opacity-100 text-text-dim hover:text-danger transition-opacity"
+              className="pr-2 py-1.5 text-text-dim hover:text-danger transition-opacity opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 touch-manipulation"
               aria-label={`Remove ${city.name}`}
             >
               <X className="w-3 h-3" />

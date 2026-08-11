@@ -43,8 +43,8 @@ export function ForecastHero({
     <header className="rounded-xl border border-border bg-bg-card/80 backdrop-blur p-6 sm:p-8">
       {current ? (
         <>
-          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2 sm:gap-x-4 w-full">
-            <div className="flex items-center gap-2 min-w-0 justify-self-start">
+          <div className="flex flex-col gap-3 sm:grid sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center sm:gap-x-4 w-full">
+            <div className="flex items-center gap-1 min-w-0 sm:justify-self-start">
               <h1 className="text-xl sm:text-3xl font-semibold text-text truncate">
                 {city.name}
               </h1>
@@ -52,7 +52,7 @@ export function ForecastHero({
                 type="button"
                 onClick={onToggleFavorite}
                 disabled={savingFavorite}
-                className="p-1 rounded transition-colors hover:bg-accent/10 disabled:opacity-50 shrink-0"
+                className="relative z-10 flex items-center justify-center min-w-11 min-h-11 -m-1 rounded transition-colors hover:bg-accent/10 disabled:opacity-50 shrink-0 touch-manipulation"
                 aria-label={
                   isFavorite ? "Remove from favorites" : "Add to favorites"
                 }
@@ -67,21 +67,23 @@ export function ForecastHero({
               </button>
             </div>
 
-            <span className="font-mono text-2xl sm:text-3xl font-bold text-accent tabular-nums justify-self-center px-1">
-              {localTime}
-            </span>
-
-            <div className="flex items-center gap-2 sm:gap-3 justify-self-end">
-              <WeatherIcon
-                type={weatherCodeToIcon(current.weatherCode)}
-                className="w-10 h-10 sm:w-12 sm:h-12 shrink-0"
-              />
-              <span className="font-mono text-2xl sm:text-3xl font-bold text-accent tabular-nums">
-                {Math.round(current.temperature)}
-                <span className="text-lg sm:text-xl text-accent-dim">
-                  {unitLabel}
-                </span>
+            <div className="flex items-center justify-between gap-4 sm:contents">
+              <span className="font-mono text-2xl sm:text-3xl font-bold text-accent tabular-nums sm:justify-self-center px-1">
+                {localTime}
               </span>
+
+              <div className="flex items-center gap-2 sm:gap-3 sm:justify-self-end">
+                <WeatherIcon
+                  type={weatherCodeToIcon(current.weatherCode)}
+                  className="w-10 h-10 sm:w-12 sm:h-12 shrink-0"
+                />
+                <span className="font-mono text-2xl sm:text-3xl font-bold text-accent tabular-nums">
+                  {Math.round(current.temperature)}
+                  <span className="text-lg sm:text-xl text-accent-dim">
+                    {unitLabel}
+                  </span>
+                </span>
+              </div>
             </div>
           </div>
 
@@ -104,7 +106,7 @@ export function ForecastHero({
               type="button"
               onClick={onToggleFavorite}
               disabled={savingFavorite}
-              className="p-1 rounded transition-colors hover:bg-accent/10 disabled:opacity-50"
+              className="relative z-10 flex items-center justify-center min-w-11 min-h-11 -m-1 rounded transition-colors hover:bg-accent/10 disabled:opacity-50 shrink-0 touch-manipulation"
               aria-label={
                 isFavorite ? "Remove from favorites" : "Add to favorites"
               }
