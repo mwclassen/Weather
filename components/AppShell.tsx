@@ -32,11 +32,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen grid-bg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
-        <div className="flex flex-row flex-nowrap items-center justify-between gap-3">
-          <div className="w-full max-w-xs">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="w-full min-w-0 sm:max-w-xs">
             <AppNav />
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center justify-end gap-2 shrink-0 self-end sm:self-auto">
             <ThemeToggle />
             <UnitToggle
               unit={unit}

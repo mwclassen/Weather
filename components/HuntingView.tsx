@@ -2,6 +2,7 @@
 
 import { ForecastHero } from "./ForecastHero";
 import { TodayHuntingEvents } from "./TodayHuntingEvents";
+import { TodaySunEvents } from "./TodaySunEvents";
 import { useWeather } from "./WeatherProvider";
 
 export function HuntingView() {
@@ -27,6 +28,7 @@ export function HuntingView() {
         savingFavorite={savingFavorite}
       />
 
+      <TodaySunEvents forecast={forecast} />
       <TodayHuntingEvents forecast={forecast} />
     </div>
   );

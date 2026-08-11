@@ -25,7 +25,7 @@ export function AppNav() {
           <Link
             key={href}
             href={href}
-            className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 font-mono text-xs transition-colors touch-manipulation ${
+            className={`flex flex-1 items-center justify-center gap-1.5 sm:gap-2 rounded-md px-2 sm:px-3 py-2 font-mono text-xs transition-colors touch-manipulation ${
               active
                 ? "bg-accent/15 text-accent"
                 : "text-text-muted hover:text-text hover:bg-bg-card"

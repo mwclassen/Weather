@@ -3,7 +3,6 @@
 import { ForecastHero } from "./ForecastHero";
 import { ForecastGrid } from "./ForecastGrid";
 import { TempSparkline } from "./TempSparkline";
-import { TodaySunEvents } from "./TodaySunEvents";
 import { useWeather } from "./WeatherProvider";
 
 export function ForecastView() {
@@ -28,8 +27,6 @@ export function ForecastView() {
         onToggleFavorite={toggleFavorite}
         savingFavorite={savingFavorite}
       />
-
-      <TodaySunEvents forecast={forecast} />
 
       <section>
         <h2 className="font-mono text-xs text-text-muted uppercase tracking-wider mb-1">

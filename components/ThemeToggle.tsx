@@ -20,7 +20,7 @@ export function ThemeToggle() {
         style={theme === "light" ? { color: "var(--on-accent)" } : undefined}
       >
         <Sun className="w-3.5 h-3.5 shrink-0" />
-        Light
+        <span className="hidden sm:inline">Light</span>
       </button>
       <button
         type="button"
@@ -34,7 +34,7 @@ export function ThemeToggle() {
         style={theme === "dark" ? { color: "var(--on-accent)" } : undefined}
       >
         <Moon className="w-3.5 h-3.5 shrink-0" />
-        Dark
+        <span className="hidden sm:inline">Dark</span>
       </button>
     </div>
   );
