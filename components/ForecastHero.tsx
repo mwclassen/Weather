@@ -43,8 +43,8 @@ export function ForecastHero({
     <header className="rounded-xl border border-border bg-bg-card/80 backdrop-blur p-6 sm:p-8">
       {current ? (
         <>
-          <div className="flex flex-col gap-3 sm:grid sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center sm:gap-x-4 w-full">
-            <div className="flex items-center gap-1 min-w-0 sm:justify-self-start">
+          <div className="flex flex-col gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-center lg:gap-x-4 w-full">
+            <div className="flex items-center gap-1 min-w-0 lg:justify-self-start">
               <h1 className="text-xl sm:text-3xl font-semibold text-text truncate">
                 {city.name}
               </h1>
@@ -68,12 +68,12 @@ export function ForecastHero({
               </button>
             </div>
 
-            <div className="flex items-center justify-between gap-4 sm:contents">
-              <span className="font-mono text-2xl sm:text-3xl font-bold text-accent tabular-nums sm:justify-self-center px-1">
+            <div className="flex items-center justify-between gap-4 lg:contents">
+              <span className="font-mono text-2xl sm:text-3xl font-bold text-accent tabular-nums lg:justify-self-center px-1">
                 {localTime}
               </span>
 
-              <div className="flex items-center gap-2 sm:gap-3 sm:justify-self-end">
+              <div className="flex items-center gap-2 sm:gap-3 lg:justify-self-end">
                 <WeatherIcon
                   type={weatherCodeToIcon(current.weatherCode)}
                   className="w-10 h-10 sm:w-12 sm:h-12 shrink-0"
@@ -88,11 +88,11 @@ export function ForecastHero({
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mt-2">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-1 mt-2">
             <p className="font-mono text-sm text-text-muted truncate">
               {formatCityLabel(city)}
             </p>
-            <p className="font-mono text-sm text-text-muted sm:text-right">
+            <p className="font-mono text-sm text-text-muted lg:text-right">
               {weatherCodeToLabel(current.weatherCode)}
             </p>
           </div>
