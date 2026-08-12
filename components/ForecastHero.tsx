@@ -6,6 +6,7 @@ import {
   formatCityLabel,
   formatTime,
   formatWindSpeed,
+  getLocationCurrentWeather,
   temperatureUnitLabel,
   weatherCodeToIcon,
   weatherCodeToLabel,
@@ -35,7 +36,8 @@ export function ForecastHero({
   onToggleFavorite: () => void;
   savingFavorite: boolean;
 }) {
-  const { current, timezone } = forecast;
+  const { timezone } = forecast;
+  const current = getLocationCurrentWeather(forecast);
   const unitLabel = temperatureUnitLabel(unit);
   const localTime = useLiveLocalTime(timezone);
 
@@ -79,6 +81,9 @@ export function ForecastHero({
                   className="w-10 h-10 sm:w-12 sm:h-12 shrink-0"
                 />
                 <div className="flex flex-col items-end leading-none">
+                  <span className="font-mono text-[10px] text-text-dim uppercase tracking-wider mb-1">
+                    Now
+                  </span>
                   <span className="font-mono text-2xl sm:text-3xl font-bold text-accent tabular-nums">
                     {Math.round(current.temperature)}
                     <span className="text-lg sm:text-xl text-accent-dim">

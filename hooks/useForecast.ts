@@ -15,5 +15,9 @@ export function useForecast(
     queryKey: ["forecast", latitude, longitude, unit],
     queryFn: () => fetchForecast(latitude!, longitude!, unit),
     enabled: latitude !== null && longitude !== null,
+    // Keep the header "now" temp fresh for the selected location.
+    staleTime: 60 * 1000,
+    refetchInterval: 2 * 60 * 1000,
+    refetchOnWindowFocus: true,
   });
 }

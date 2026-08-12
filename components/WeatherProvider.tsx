@@ -22,7 +22,12 @@ import {
   useUserPreferences,
 } from "@/hooks/useSavedCities";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
-import type { ForecastData, GeoResult, TemperatureUnit } from "@/lib/open-meteo";
+import {
+  forecastMatchesLocation,
+  type ForecastData,
+  type GeoResult,
+  type TemperatureUnit,
+} from "@/lib/open-meteo";
 import type { SavedCity } from "@/lib/supabase/types";
 
 interface WeatherContextValue {
@@ -105,8 +110,9 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
   }, [requestLocation]);
 
   const {
-    data: forecast,
-    isLoading,
+    data: forecastData,
+    isLoading: forecastLoading,
+    isFetching: forecastFetching,
     isError,
     error: forecastError,
   } = useForecast(
@@ -114,6 +120,14 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
     selectedCity?.longitude ?? null,
     unit
   );
+
+  // Only expose forecast that belongs to the selected location (grid snap allowed).
+  const forecast =
+    forecastData &&
+    selectedCity &&
+    forecastMatchesLocation(forecastData, selectedCity)
+      ? forecastData
+      : undefined;
 
   const locationFailed =
     locationStatus === "denied" ||
@@ -123,6 +137,9 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
   // so the home page never flashes an empty chrome shell.
   const locating = !selectedCity && !locationFailed;
   const showLocationPrompt = !selectedCity && locationFailed;
+  const isLoading =
+    !!selectedCity &&
+    (forecastLoading || (forecastFetching && !forecast));
 
   const isFavorite =
     selectedCity !== null &&

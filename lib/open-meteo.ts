@@ -58,6 +58,7 @@ export interface DailyForecast {
 export interface HourlyForecast {
   times: string[];
   temperatures: number[];
+  feelsLike: number[];
   humidity: number[];
   precipProbability: number[];
   weatherCodes: number[];
@@ -77,6 +78,7 @@ export interface ForecastData {
   latitude: number;
   longitude: number;
   timezone: string;
+  utcOffsetSeconds: number;
   current: CurrentWeather | null;
   daily: DailyForecast;
   hourly: HourlyForecast;
@@ -174,6 +176,7 @@ export async function fetchForecast(
     ].join(","),
     hourly: [
       "temperature_2m",
+      "apparent_temperature",
       "relative_humidity_2m",
       "precipitation_probability",
       "weathercode",
@@ -181,17 +184,18 @@ export async function fetchForecast(
     ].join(","),
   });
 
-  const res = await fetch(`${FORECAST_URL}?${params}`);
+  const res = await fetch(`${FORECAST_URL}?${params}`, { cache: "no-store" });
   if (!res.ok) throw new Error("Forecast fetch failed");
 
   const data = await res.json();
   const daily = data.daily;
   const hourly = data.hourly;
 
-  return {
+  const forecast: ForecastData = {
     latitude: data.latitude,
     longitude: data.longitude,
     timezone: data.timezone,
+    utcOffsetSeconds: data.utc_offset_seconds ?? 0,
     current: data.current
       ? {
           temperature: data.current.temperature_2m,
@@ -218,12 +222,80 @@ export async function fetchForecast(
     hourly: {
       times: hourly.time,
       temperatures: hourly.temperature_2m,
+      feelsLike: hourly.apparent_temperature,
       humidity: hourly.relative_humidity_2m,
       precipProbability: hourly.precipitation_probability,
       weatherCodes: hourly.weathercode,
       windSpeed: hourly.windspeed_10m,
     },
   };
+
+  // Prefer the API current block; if missing, fall back to the hour nearest
+  // "now" at this location so the header always reflects this place.
+  if (!forecast.current) {
+    forecast.current = getLocationCurrentWeather(forecast);
+  }
+
+  return forecast;
+}
+
+/** Interpret Open-Meteo local ISO times (no offset) using the forecast UTC offset. */
+export function forecastLocalIsoToUtcMs(
+  localIso: string,
+  utcOffsetSeconds: number
+): number {
+  const asUtc = Date.parse(localIso.endsWith("Z") ? localIso : `${localIso}Z`);
+  if (Number.isNaN(asUtc)) return NaN;
+  return asUtc - utcOffsetSeconds * 1000;
+}
+
+/**
+ * Current air temperature / feels-like for this forecast location ("now"),
+ * not the daily high. Uses Open-Meteo current when present; otherwise the
+ * nearest hourly slot in the location's local time.
+ */
+export function getLocationCurrentWeather(
+  forecast: ForecastData
+): CurrentWeather | null {
+  if (forecast.current) return forecast.current;
+
+  const { hourly, utcOffsetSeconds } = forecast;
+  if (!hourly.times.length) return null;
+
+  const now = Date.now();
+  let bestIndex = 0;
+  let bestDiff = Infinity;
+
+  for (let i = 0; i < hourly.times.length; i++) {
+    const t = forecastLocalIsoToUtcMs(hourly.times[i], utcOffsetSeconds);
+    if (Number.isNaN(t)) continue;
+    const diff = Math.abs(t - now);
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      bestIndex = i;
+    }
+  }
+
+  return {
+    temperature: hourly.temperatures[bestIndex],
+    feelsLike: hourly.feelsLike[bestIndex] ?? hourly.temperatures[bestIndex],
+    humidity: hourly.humidity[bestIndex],
+    weatherCode: hourly.weatherCodes[bestIndex],
+    windSpeed: hourly.windSpeed[bestIndex],
+    time: hourly.times[bestIndex],
+  };
+}
+
+/** True when the forecast grid point is for the selected city (Open-Meteo snaps coords). */
+export function forecastMatchesLocation(
+  forecast: ForecastData,
+  location: { latitude: number; longitude: number },
+  maxDegrees = 0.25
+): boolean {
+  return (
+    Math.abs(forecast.latitude - location.latitude) <= maxDegrees &&
+    Math.abs(forecast.longitude - location.longitude) <= maxDegrees
+  );
 }
 
 export function getDayDetail(forecast: ForecastData, index: number): DayDetail {
