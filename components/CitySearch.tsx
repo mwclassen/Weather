@@ -108,7 +108,7 @@ export function CitySearch({
           </button>
         )}
         <span className="font-mono text-[10px] text-text-dim hidden sm:inline">
-          GEO:{"//"}open-meteo
+          GEO:{"//"}openweathermap.org
         </span>
       </div>
 

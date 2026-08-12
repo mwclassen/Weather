@@ -108,12 +108,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <footer className="pt-8 border-t border-border font-mono text-[10px] text-text-dim text-center">
           Data:{" "}
           <a
-            href="https://open-meteo.com/"
+            href="https://openweathermap.org/"
             target="_blank"
             rel="noopener noreferrer"
             className="text-accent-dim hover:text-accent"
           >
-            Open-Meteo
+            OpenWeatherMap
           </a>
         </footer>
       </div>

@@ -81,7 +81,7 @@ export function DayCard({
           </span>
         </div>
         <span className="text-[10px] text-danger tabular-nums">
-          feels {Math.round(feelsLikeMax)}
+          Feels like {Math.round(feelsLikeMax)}
           {unitLabel}
         </span>
       </div>

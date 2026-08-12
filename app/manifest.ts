@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "15-Day Forecast",
+    name: "Weather Forecast",
     short_name: "Forecast",
-    description: "15-day weather forecast powered by Open-Meteo",
+    description: "Weather forecast powered by OpenWeatherMap",
     start_url: "/",
     display: "standalone",
     background_color: "#6CB4EE",

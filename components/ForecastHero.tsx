@@ -84,14 +84,20 @@ export function ForecastHero({
                   <span className="font-mono text-[10px] text-text-dim uppercase tracking-wider mb-1">
                     Now
                   </span>
-                  <span className="font-mono text-2xl sm:text-3xl font-bold text-accent tabular-nums">
+                  <span
+                    className="font-mono text-2xl sm:text-3xl font-bold text-accent tabular-nums"
+                    title="Current air temperature"
+                  >
                     {Math.round(current.temperature)}
                     <span className="text-lg sm:text-xl text-accent-dim">
                       {unitLabel}
                     </span>
                   </span>
-                  <span className="font-mono text-xs sm:text-sm text-danger tabular-nums mt-1">
-                    feels {Math.round(current.feelsLike)}
+                  <span
+                    className="font-mono text-[10px] sm:text-xs text-danger tabular-nums mt-1"
+                    title="Apparent temperature (heat index / wind chill)"
+                  >
+                    Feels like {Math.round(current.feelsLike)}
                     {unitLabel}
                   </span>
                 </div>

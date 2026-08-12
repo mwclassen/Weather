@@ -30,7 +30,7 @@ export function ForecastView() {
 
       <section>
         <h2 className="font-mono text-xs text-text-muted uppercase tracking-wider mb-1">
-          Daily outlook · 15 days
+          Daily outlook · up to 8 days
         </h2>
         <p className="font-mono text-[10px] text-text-dim mb-4">
           Click any day for hourly breakdown and details

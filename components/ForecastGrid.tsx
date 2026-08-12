@@ -59,7 +59,7 @@ export function ForecastGrid({
 export function ForecastGridSkeleton() {
   return (
     <div className="flex gap-3 overflow-hidden">
-      {Array.from({ length: 15 }).map((_, i) => (
+      {Array.from({ length: 8 }).map((_, i) => (
         <div
           key={i}
           className="flex-shrink-0 w-36 h-52 rounded-lg border border-border skeleton"

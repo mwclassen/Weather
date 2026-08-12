@@ -107,44 +107,24 @@ export interface DayDetail {
   }[];
 }
 
-const GEO_URL = "https://geocoding-api.open-meteo.com/v1/search";
-const FORECAST_URL = "https://api.open-meteo.com/v1/forecast";
-
 export async function searchCities(query: string): Promise<GeoResult[]> {
   if (query.trim().length < 2) return [];
 
   const params = new URLSearchParams({
-    name: query.trim(),
-    count: "8",
-    language: "en",
-    format: "json",
+    q: query.trim(),
   });
 
-  const res = await fetch(`${GEO_URL}?${params}`);
-  if (!res.ok) throw new Error("City search failed");
+  const res = await fetch(`/api/weather/search?${params}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as {
+      error?: string;
+    } | null;
+    throw new Error(body?.error ?? "City search failed");
+  }
 
-  const data = await res.json();
-  if (!data.results) return [];
-
-  return data.results.map(
-    (r: {
-      id: number;
-      name: string;
-      latitude: number;
-      longitude: number;
-      country: string;
-      admin1?: string;
-      timezone: string;
-    }) => ({
-      id: r.id,
-      name: r.name,
-      latitude: r.latitude,
-      longitude: r.longitude,
-      country: r.country,
-      admin1: r.admin1,
-      timezone: r.timezone,
-    })
-  );
+  return (await res.json()) as GeoResult[];
 }
 
 export async function fetchForecast(
@@ -153,97 +133,37 @@ export async function fetchForecast(
   unit: TemperatureUnit = "celsius"
 ): Promise<ForecastData> {
   const params = new URLSearchParams({
-    latitude: String(latitude),
-    longitude: String(longitude),
-    forecast_days: "15",
-    timezone: "auto",
-    temperature_unit: unit,
-    windspeed_unit: isImperial(unit) ? "mph" : "kmh",
-    precipitation_unit: isImperial(unit) ? "inch" : "mm",
-    current:
-      "temperature_2m,apparent_temperature,relative_humidity_2m,weathercode,windspeed_10m",
-    daily: [
-      "weathercode",
-      "temperature_2m_max",
-      "temperature_2m_min",
-      "apparent_temperature_max",
-      "precipitation_probability_max",
-      "precipitation_sum",
-      "windspeed_10m_max",
-      "uv_index_max",
-      "sunrise",
-      "sunset",
-    ].join(","),
-    hourly: [
-      "temperature_2m",
-      "apparent_temperature",
-      "relative_humidity_2m",
-      "precipitation_probability",
-      "weathercode",
-      "windspeed_10m",
-    ].join(","),
+    lat: String(latitude),
+    lon: String(longitude),
+    unit,
   });
 
-  const res = await fetch(`${FORECAST_URL}?${params}`, { cache: "no-store" });
-  if (!res.ok) throw new Error("Forecast fetch failed");
+  const res = await fetch(`/api/weather/forecast?${params}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as {
+      error?: string;
+    } | null;
+    throw new Error(body?.error ?? "Forecast fetch failed");
+  }
 
-  const data = await res.json();
-  const daily = data.daily;
-  const hourly = data.hourly;
-
-  const forecast: ForecastData = {
-    latitude: data.latitude,
-    longitude: data.longitude,
-    timezone: data.timezone,
-    utcOffsetSeconds: data.utc_offset_seconds ?? 0,
-    current: data.current
-      ? {
-          temperature: data.current.temperature_2m,
-          feelsLike: data.current.apparent_temperature,
-          humidity: data.current.relative_humidity_2m,
-          weatherCode: data.current.weathercode,
-          windSpeed: data.current.windspeed_10m,
-          time: data.current.time,
-        }
-      : null,
-    daily: {
-      dates: daily.time,
-      weatherCodes: daily.weathercode,
-      tempMax: daily.temperature_2m_max,
-      tempMin: daily.temperature_2m_min,
-      feelsLikeMax: daily.apparent_temperature_max,
-      precipProbability: daily.precipitation_probability_max,
-      precipSum: daily.precipitation_sum,
-      windSpeedMax: daily.windspeed_10m_max,
-      uvIndexMax: daily.uv_index_max,
-      sunrise: daily.sunrise,
-      sunset: daily.sunset,
-    },
-    hourly: {
-      times: hourly.time,
-      temperatures: hourly.temperature_2m,
-      feelsLike: hourly.apparent_temperature,
-      humidity: hourly.relative_humidity_2m,
-      precipProbability: hourly.precipitation_probability,
-      weatherCodes: hourly.weathercode,
-      windSpeed: hourly.windspeed_10m,
-    },
-  };
-
-  // Prefer the API current block; if missing, fall back to the hour nearest
-  // "now" at this location so the header always reflects this place.
+  const forecast = (await res.json()) as ForecastData;
   if (!forecast.current) {
     forecast.current = getLocationCurrentWeather(forecast);
   }
-
   return forecast;
 }
 
-/** Interpret Open-Meteo local ISO times (no offset) using the forecast UTC offset. */
+/** Interpret forecast local ISO times (with or without offset). */
 export function forecastLocalIsoToUtcMs(
   localIso: string,
   utcOffsetSeconds: number
 ): number {
+  if (/[Zz]$/.test(localIso) || /[+-]\d{2}:\d{2}$/.test(localIso)) {
+    const ms = Date.parse(localIso);
+    return Number.isNaN(ms) ? NaN : ms;
+  }
   const asUtc = Date.parse(localIso.endsWith("Z") ? localIso : `${localIso}Z`);
   if (Number.isNaN(asUtc)) return NaN;
   return asUtc - utcOffsetSeconds * 1000;
@@ -515,6 +435,22 @@ export function offsetIsoTime(isoTime: string, offsetMinutes: number): string {
   if (Number.isNaN(date.getTime())) return isoTime;
   date.setMinutes(date.getMinutes() + offsetMinutes);
   const pad = (n: number) => n.toString().padStart(2, "0");
+
+  const offsetMatch = isoTime.match(/([+-]\d{2}:\d{2}|Z)$/);
+  if (offsetMatch) {
+    let shiftMs = 0;
+    if (offsetMatch[1] !== "Z") {
+      const m = offsetMatch[1].match(/([+-])(\d{2}):(\d{2})/);
+      if (m) {
+        const sign = m[1] === "-" ? -1 : 1;
+        shiftMs =
+          sign * (parseInt(m[2], 10) * 3600 + parseInt(m[3], 10) * 60) * 1000;
+      }
+    }
+    const wall = new Date(date.getTime() + shiftMs);
+    return `${wall.getUTCFullYear()}-${pad(wall.getUTCMonth() + 1)}-${pad(wall.getUTCDate())}T${pad(wall.getUTCHours())}:${pad(wall.getUTCMinutes())}${offsetMatch[1]}`;
+  }
+
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
@@ -660,37 +596,47 @@ export function isWithinHuntingWindow(
 }
 
 export function weatherCodeToLabel(code: number): string {
-  const map: Record<number, string> = {
-    0: "Clear",
-    1: "Mainly clear",
-    2: "Partly cloudy",
-    3: "Overcast",
-    45: "Fog",
-    48: "Rime fog",
-    51: "Light drizzle",
-    53: "Drizzle",
-    55: "Heavy drizzle",
-    56: "Freezing drizzle",
-    57: "Heavy freezing drizzle",
-    61: "Light rain",
-    63: "Rain",
-    65: "Heavy rain",
-    66: "Freezing rain",
-    67: "Heavy freezing rain",
-    71: "Light snow",
-    73: "Snow",
-    75: "Heavy snow",
-    77: "Snow grains",
-    80: "Light showers",
-    81: "Showers",
-    82: "Heavy showers",
-    85: "Snow showers",
-    86: "Heavy snow showers",
-    95: "Thunderstorm",
-    96: "Thunderstorm + hail",
-    99: "Thunderstorm + heavy hail",
-  };
-  return map[code] ?? "Unknown";
+  // OpenWeatherMap condition codes: https://openweathermap.org/weather-conditions
+  if (code >= 200 && code < 300) {
+    if (code === 200 || code === 201 || code === 210) return "Thunderstorm";
+    if (code >= 230) return "Thunderstorm with drizzle";
+    return "Thunderstorm";
+  }
+  if (code >= 300 && code < 400) return "Drizzle";
+  if (code >= 500 && code < 600) {
+    if (code === 500) return "Light rain";
+    if (code === 501) return "Moderate rain";
+    if (code === 502 || code === 503 || code === 504) return "Heavy rain";
+    if (code === 511) return "Freezing rain";
+    if (code >= 520) return "Rain showers";
+    return "Rain";
+  }
+  if (code >= 600 && code < 700) {
+    if (code === 600) return "Light snow";
+    if (code === 601) return "Snow";
+    if (code === 602) return "Heavy snow";
+    if (code >= 611 && code <= 616) return "Sleet";
+    if (code >= 620) return "Snow showers";
+    return "Snow";
+  }
+  if (code >= 700 && code < 800) {
+    if (code === 701) return "Mist";
+    if (code === 711) return "Smoke";
+    if (code === 721) return "Haze";
+    if (code === 731 || code === 761) return "Dust";
+    if (code === 741) return "Fog";
+    if (code === 751) return "Sand";
+    if (code === 762) return "Ash";
+    if (code === 771) return "Squall";
+    if (code === 781) return "Tornado";
+    return "Haze";
+  }
+  if (code === 800) return "Clear";
+  if (code === 801) return "Few clouds";
+  if (code === 802) return "Partly cloudy";
+  if (code === 803) return "Broken clouds";
+  if (code === 804) return "Overcast";
+  return "Unknown";
 }
 
 export type WeatherIconType =
@@ -704,16 +650,15 @@ export type WeatherIconType =
   | "thunder";
 
 export function weatherCodeToIcon(code: number): WeatherIconType {
-  if (code === 0) return "sun";
-  if (code <= 2) return "partly-cloudy";
-  if (code === 3) return "cloud";
-  if (code <= 48) return "fog";
-  if (code <= 57) return "drizzle";
-  if (code <= 67) return "rain";
-  if (code <= 77) return "snow";
-  if (code <= 82) return "rain";
-  if (code <= 86) return "snow";
-  return "thunder";
+  // OpenWeatherMap condition codes
+  if (code >= 200 && code < 300) return "thunder";
+  if (code >= 300 && code < 400) return "drizzle";
+  if (code >= 500 && code < 600) return "rain";
+  if (code >= 600 && code < 700) return "snow";
+  if (code >= 700 && code < 800) return "fog";
+  if (code === 800) return "sun";
+  if (code === 801 || code === 802) return "partly-cloudy";
+  return "cloud";
 }
 
 export function formatCityLabel(city: GeoResult): string {

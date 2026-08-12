@@ -14,9 +14,9 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "15-Day Forecast",
-  description: "15-day weather forecast powered by Open-Meteo",
-  applicationName: "15-Day Forecast",
+  title: "Weather Forecast",
+  description: "Weather forecast powered by OpenWeatherMap",
+  applicationName: "Weather Forecast",
   appleWebApp: {
     capable: true,
     title: "Forecast",

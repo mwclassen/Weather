@@ -31,7 +31,7 @@ export function TempSparkline({
     <div className="rounded-lg border border-border bg-bg-card p-4">
       <div className="flex items-center justify-between mb-2">
         <span className="font-mono text-xs text-text-muted uppercase tracking-wider">
-          15-day temperature trend
+          Temperature trend
         </span>
         <span className="font-mono text-xs text-text-dim">
           {Math.round(min)}
