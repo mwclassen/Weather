@@ -78,12 +78,18 @@ export function ForecastHero({
                   type={weatherCodeToIcon(current.weatherCode)}
                   className="w-10 h-10 sm:w-12 sm:h-12 shrink-0"
                 />
-                <span className="font-mono text-2xl sm:text-3xl font-bold text-accent tabular-nums">
-                  {Math.round(current.temperature)}
-                  <span className="text-lg sm:text-xl text-accent-dim">
+                <div className="flex flex-col items-end leading-none">
+                  <span className="font-mono text-2xl sm:text-3xl font-bold text-accent tabular-nums">
+                    {Math.round(current.temperature)}
+                    <span className="text-lg sm:text-xl text-accent-dim">
+                      {unitLabel}
+                    </span>
+                  </span>
+                  <span className="font-mono text-xs sm:text-sm text-danger tabular-nums mt-1">
+                    feels {Math.round(current.feelsLike)}
                     {unitLabel}
                   </span>
-                </span>
+                </div>
               </div>
             </div>
           </div>

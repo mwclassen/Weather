@@ -46,6 +46,7 @@ export interface DailyForecast {
   weatherCodes: number[];
   tempMax: number[];
   tempMin: number[];
+  feelsLikeMax: number[];
   precipProbability: number[];
   precipSum: number[];
   windSpeedMax: number[];
@@ -65,6 +66,7 @@ export interface HourlyForecast {
 
 export interface CurrentWeather {
   temperature: number;
+  feelsLike: number;
   humidity: number;
   weatherCode: number;
   windSpeed: number;
@@ -86,6 +88,7 @@ export interface DayDetail {
   weatherCode: number;
   tempMax: number;
   tempMin: number;
+  feelsLikeMax: number;
   precipProbability: number;
   precipSum: number;
   windSpeedMax: number;
@@ -155,11 +158,13 @@ export async function fetchForecast(
     temperature_unit: unit,
     windspeed_unit: isImperial(unit) ? "mph" : "kmh",
     precipitation_unit: isImperial(unit) ? "inch" : "mm",
-    current: "temperature_2m,relative_humidity_2m,weathercode,windspeed_10m",
+    current:
+      "temperature_2m,apparent_temperature,relative_humidity_2m,weathercode,windspeed_10m",
     daily: [
       "weathercode",
       "temperature_2m_max",
       "temperature_2m_min",
+      "apparent_temperature_max",
       "precipitation_probability_max",
       "precipitation_sum",
       "windspeed_10m_max",
@@ -190,6 +195,7 @@ export async function fetchForecast(
     current: data.current
       ? {
           temperature: data.current.temperature_2m,
+          feelsLike: data.current.apparent_temperature,
           humidity: data.current.relative_humidity_2m,
           weatherCode: data.current.weathercode,
           windSpeed: data.current.windspeed_10m,
@@ -201,6 +207,7 @@ export async function fetchForecast(
       weatherCodes: daily.weathercode,
       tempMax: daily.temperature_2m_max,
       tempMin: daily.temperature_2m_min,
+      feelsLikeMax: daily.apparent_temperature_max,
       precipProbability: daily.precipitation_probability_max,
       precipSum: daily.precipitation_sum,
       windSpeedMax: daily.windspeed_10m_max,
@@ -241,6 +248,7 @@ export function getDayDetail(forecast: ForecastData, index: number): DayDetail {
     weatherCode: daily.weatherCodes[index],
     tempMax: daily.tempMax[index],
     tempMin: daily.tempMin[index],
+    feelsLikeMax: daily.feelsLikeMax[index],
     precipProbability: daily.precipProbability[index],
     precipSum: daily.precipSum[index],
     windSpeedMax: daily.windSpeedMax[index],

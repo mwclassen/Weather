@@ -17,6 +17,7 @@ export function DayCard({
   weatherCode,
   tempMax,
   tempMin,
+  feelsLikeMax,
   precip,
   wind,
   timezone,
@@ -29,6 +30,7 @@ export function DayCard({
   weatherCode: number;
   tempMax: number;
   tempMin: number;
+  feelsLikeMax: number;
   precip: number;
   wind: number;
   timezone: string;
@@ -67,13 +69,19 @@ export function DayCard({
         {weatherCodeToLabel(weatherCode)}
       </p>
 
-      <div className="flex justify-center gap-3 font-mono">
-        <span className="text-lg font-semibold text-text">
-          {Math.round(tempMax)}
-          {unitLabel}
-        </span>
-        <span className="text-sm text-text-dim self-end pb-0.5">
-          {Math.round(tempMin)}
+      <div className="flex flex-col items-center gap-0.5 font-mono">
+        <div className="flex justify-center gap-3">
+          <span className="text-lg font-semibold text-text">
+            {Math.round(tempMax)}
+            {unitLabel}
+          </span>
+          <span className="text-sm text-text-dim self-end pb-0.5">
+            {Math.round(tempMin)}
+            {unitLabel}
+          </span>
+        </div>
+        <span className="text-[10px] text-danger tabular-nums">
+          feels {Math.round(feelsLikeMax)}
           {unitLabel}
         </span>
       </div>

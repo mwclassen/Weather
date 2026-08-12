@@ -175,6 +175,10 @@ export function DayDetailPanel({
                   {Math.round(detail.tempMin)}
                   {unitLabel}
                 </span>
+                <span className="text-sm text-danger tabular-nums">
+                  feels {Math.round(detail.feelsLikeMax)}
+                  {unitLabel}
+                </span>
                 <span className="text-xs text-text-muted">
                   ±{tempSpread}
                   {unitLabel} range
