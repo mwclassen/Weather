@@ -13,6 +13,8 @@ import {
 import { useCurrentLocation } from "@/hooks/useCurrentLocation";
 import { useForecast } from "@/hooks/useForecast";
 import {
+  sameLocation,
+  savedCityToGeo,
   useRemoveCity,
   useSaveCity,
   useSavedCities,
@@ -74,6 +76,21 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
     setSelectedCity((prev) => prev ?? currentLocation);
   }, [currentLocation]);
 
+  // If geolocation fails, fall back to the first pinned city so the home
+  // page isn't an empty chrome shell.
+  useEffect(() => {
+    if (selectedCity || autoLocated.current || savedCities.length === 0) return;
+    if (
+      locationStatus !== "denied" &&
+      locationStatus !== "unavailable" &&
+      locationStatus !== "error"
+    ) {
+      return;
+    }
+    autoLocated.current = true;
+    setSelectedCity(savedCityToGeo(savedCities[0]));
+  }, [locationStatus, savedCities, selectedCity]);
+
   const selectCity = useCallback((city: GeoResult) => {
     autoLocated.current = true;
     setSelectedCity(city);
@@ -98,27 +115,23 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
     unit
   );
 
-  const locating = locationStatus === "loading";
-  const showLocationPrompt =
-    !selectedCity &&
-    (locationStatus === "denied" ||
-      locationStatus === "unavailable" ||
-      locationStatus === "error");
+  const locationFailed =
+    locationStatus === "denied" ||
+    locationStatus === "unavailable" ||
+    locationStatus === "error";
+  // Keep the skeleton up through idle → loading → ready until a city is set,
+  // so the home page never flashes an empty chrome shell.
+  const locating = !selectedCity && !locationFailed;
+  const showLocationPrompt = !selectedCity && locationFailed;
 
   const isFavorite =
     selectedCity !== null &&
-    savedCities.some(
-      (c) =>
-        c.latitude === selectedCity.latitude &&
-        c.longitude === selectedCity.longitude
-    );
+    savedCities.some((c) => sameLocation(c, selectedCity));
 
   const changeUnit = useCallback(
     (newUnit: TemperatureUnit) => {
       setUnit(newUnit);
-      if (isSupabaseConfigured()) {
-        updatePrefs.mutate(newUnit);
-      }
+      updatePrefs.mutate(newUnit);
     },
     [updatePrefs]
   );
@@ -127,13 +140,9 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
     if (!selectedCity) return;
 
     if (isFavorite) {
-      const saved = savedCities.find(
-        (c) =>
-          c.latitude === selectedCity.latitude &&
-          c.longitude === selectedCity.longitude
-      );
+      const saved = savedCities.find((c) => sameLocation(c, selectedCity));
       if (saved) removeCityMutation.mutate(saved.id);
-    } else if (isSupabaseConfigured()) {
+    } else {
       saveCity.mutate(selectedCity);
     }
   }, [selectedCity, isFavorite, savedCities, saveCity, removeCityMutation]);

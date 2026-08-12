@@ -3,7 +3,7 @@
 import { MapPin, X } from "lucide-react";
 import type { SavedCity } from "@/lib/supabase/types";
 import type { GeoResult } from "@/lib/open-meteo";
-import { savedCityToGeo } from "@/hooks/useSavedCities";
+import { sameLocation, savedCityToGeo } from "@/hooks/useSavedCities";
 
 export function FavoritesBar({
   cities,
@@ -25,9 +25,7 @@ export function FavoritesBar({
       </span>
       {cities.map((city) => {
         const geo = savedCityToGeo(city);
-        const active =
-          selected?.latitude === city.latitude &&
-          selected?.longitude === city.longitude;
+        const active = selected ? sameLocation(selected, city) : false;
 
         return (
           <div

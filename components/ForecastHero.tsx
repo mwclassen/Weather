@@ -52,16 +52,17 @@ export function ForecastHero({
                 type="button"
                 onClick={onToggleFavorite}
                 disabled={savingFavorite}
-                className="relative z-10 flex items-center justify-center min-w-11 min-h-11 -m-1 rounded transition-colors hover:bg-accent/10 disabled:opacity-50 shrink-0 touch-manipulation"
+                className="group relative z-10 flex items-center justify-center min-w-11 min-h-11 -m-1 rounded transition-colors hover:bg-accent/10 disabled:opacity-50 shrink-0 touch-manipulation"
                 aria-label={
                   isFavorite ? "Remove from favorites" : "Add to favorites"
                 }
+                aria-pressed={isFavorite}
               >
                 <Star
-                  className={`w-5 h-5 ${
+                  className={`w-5 h-5 transition-colors ${
                     isFavorite
-                      ? "fill-accent text-accent"
-                      : "text-text-muted hover:text-accent"
+                      ? "fill-current text-accent"
+                      : "fill-none text-text-muted group-hover:text-accent"
                   }`}
                 />
               </button>
@@ -106,16 +107,17 @@ export function ForecastHero({
               type="button"
               onClick={onToggleFavorite}
               disabled={savingFavorite}
-              className="relative z-10 flex items-center justify-center min-w-11 min-h-11 -m-1 rounded transition-colors hover:bg-accent/10 disabled:opacity-50 shrink-0 touch-manipulation"
+              className="group relative z-10 flex items-center justify-center min-w-11 min-h-11 -m-1 rounded transition-colors hover:bg-accent/10 disabled:opacity-50 shrink-0 touch-manipulation"
               aria-label={
                 isFavorite ? "Remove from favorites" : "Add to favorites"
               }
+              aria-pressed={isFavorite}
             >
               <Star
-                className={`w-5 h-5 ${
+                className={`w-5 h-5 transition-colors ${
                   isFavorite
-                    ? "fill-accent text-accent"
-                    : "text-text-muted hover:text-accent"
+                    ? "fill-current text-accent"
+                    : "fill-none text-text-muted group-hover:text-accent"
                 }`}
               />
             </button>

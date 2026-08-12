@@ -2,6 +2,14 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getClientId } from "@/lib/client-id";
+import {
+  readLocalCities,
+  readLocalUnit,
+  removeLocalCity,
+  sameLocation,
+  upsertLocalCity,
+  writeLocalUnit,
+} from "@/lib/local-favorites";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase/client";
 import type { SavedCity, TemperatureUnit } from "@/lib/supabase/types";
 import type { GeoResult } from "@/lib/open-meteo";
@@ -10,13 +18,17 @@ const SAVED_KEY = ["saved-cities"];
 const PREFS_KEY = ["user-preferences"];
 
 export function useSavedCities() {
-  const clientId = typeof window !== "undefined" ? getClientId() : "";
+  const hasWindow = typeof window !== "undefined";
+  const clientId = hasWindow ? getClientId() : "";
+  const supabaseReady = isSupabaseConfigured();
 
   return useQuery({
-    queryKey: [...SAVED_KEY, clientId],
+    queryKey: [...SAVED_KEY, clientId, supabaseReady ? "remote" : "local"],
     queryFn: async (): Promise<SavedCity[]> => {
+      if (!supabaseReady) return readLocalCities();
+
       const supabase = getSupabase();
-      if (!supabase || !clientId) return [];
+      if (!supabase || !clientId) return readLocalCities();
 
       const { data, error } = await supabase
         .from("saved_cities")
@@ -27,18 +39,22 @@ export function useSavedCities() {
       if (error) throw error;
       return (data ?? []) as SavedCity[];
     },
-    enabled: isSupabaseConfigured() && Boolean(clientId),
+    enabled: hasWindow,
   });
 }
 
 export function useUserPreferences() {
-  const clientId = typeof window !== "undefined" ? getClientId() : "";
+  const hasWindow = typeof window !== "undefined";
+  const clientId = hasWindow ? getClientId() : "";
+  const supabaseReady = isSupabaseConfigured();
 
   return useQuery({
-    queryKey: [...PREFS_KEY, clientId],
+    queryKey: [...PREFS_KEY, clientId, supabaseReady ? "remote" : "local"],
     queryFn: async (): Promise<TemperatureUnit> => {
+      if (!supabaseReady) return readLocalUnit() ?? "celsius";
+
       const supabase = getSupabase();
-      if (!supabase || !clientId) return "celsius";
+      if (!supabase || !clientId) return readLocalUnit() ?? "celsius";
 
       const { data, error } = await supabase
         .from("user_preferences")
@@ -47,10 +63,14 @@ export function useUserPreferences() {
         .maybeSingle();
 
       if (error) throw error;
-      return (data as { temperature_unit: TemperatureUnit } | null)
-        ?.temperature_unit ?? "celsius";
+      return (
+        (data as { temperature_unit: TemperatureUnit } | null)
+          ?.temperature_unit ??
+        readLocalUnit() ??
+        "celsius"
+      );
     },
-    enabled: isSupabaseConfigured() && Boolean(clientId),
+    enabled: hasWindow,
   });
 }
 
@@ -60,8 +80,14 @@ export function useSaveCity() {
 
   return useMutation({
     mutationFn: async (city: GeoResult) => {
+      if (!isSupabaseConfigured()) {
+        return upsertLocalCity(city, clientId || "local");
+      }
+
       const supabase = getSupabase();
-      if (!supabase) throw new Error("Supabase not configured");
+      if (!supabase) {
+        return upsertLocalCity(city, clientId || "local");
+      }
 
       const { error } = await supabase.from("saved_cities").upsert(
         {
@@ -88,8 +114,14 @@ export function useRemoveCity() {
 
   return useMutation({
     mutationFn: async (id: string) => {
+      if (!isSupabaseConfigured()) {
+        return removeLocalCity(id);
+      }
+
       const supabase = getSupabase();
-      if (!supabase) throw new Error("Supabase not configured");
+      if (!supabase) {
+        return removeLocalCity(id);
+      }
 
       const clientId = getClientId();
       const { error } = await supabase
@@ -112,8 +144,12 @@ export function useUpdatePreferences() {
 
   return useMutation({
     mutationFn: async (unit: TemperatureUnit) => {
+      writeLocalUnit(unit);
+
+      if (!isSupabaseConfigured()) return;
+
       const supabase = getSupabase();
-      if (!supabase) throw new Error("Supabase not configured");
+      if (!supabase) return;
 
       const { error } = await supabase.from("user_preferences").upsert(
         {
@@ -143,3 +179,5 @@ export function savedCityToGeo(city: SavedCity): GeoResult {
     timezone: "auto",
   };
 }
+
+export { sameLocation };

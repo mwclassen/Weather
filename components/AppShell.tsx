@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, MapPin } from "lucide-react";
 import { AppNav } from "./AppNav";
 import { CitySearch } from "./CitySearch";
 import { FavoritesBar } from "./FavoritesBar";
@@ -61,15 +61,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         {!supabaseConfigured && (
           <p className="font-mono text-[10px] text-warning/80 border border-warning/20 rounded px-3 py-2 bg-warning/5">
-            Supabase not configured — favorites and unit sync disabled. Add env
-            vars from .env.local.example
-          </p>
-        )}
-
-        {showLocationPrompt && (
-          <p className="font-mono text-[10px] text-text-muted border border-border rounded px-3 py-2 bg-bg-card/60">
-            {locationError ?? "Unable to use current location"}. Search for a
-            city or allow location access and tap the locate button.
+            Supabase not configured — favorites are stored in this browser only.
+            Add env vars from .env.local.example to sync across devices.
           </p>
         )}
 
@@ -91,6 +84,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-2 rounded-lg border border-danger/30 bg-danger/5 px-4 py-3 font-mono text-sm text-danger">
             <AlertCircle className="w-4 h-4 shrink-0" />
             {error?.message ?? "Failed to load forecast"}
+          </div>
+        )}
+
+        {showLocationPrompt && (
+          <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-border bg-bg-card/70 px-6 py-16 text-center">
+            <MapPin className="h-8 w-8 text-accent" aria-hidden />
+            <div className="space-y-1">
+              <p className="font-mono text-sm text-text">
+                Choose a location to see the forecast
+              </p>
+              <p className="font-mono text-[11px] text-text-muted max-w-sm">
+                {locationError
+                  ? `${locationError}. Search for a city above, or allow location access and tap the locate button.`
+                  : "Search for a city above, or allow location access and tap the locate button."}
+              </p>
+            </div>
           </div>
         )}
 
