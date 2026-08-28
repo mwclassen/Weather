@@ -1,7 +1,8 @@
-import type {
-  ForecastData,
-  GeoResult,
-  TemperatureUnit,
+import {
+  computeHeatIndex,
+  type ForecastData,
+  type GeoResult,
+  type TemperatureUnit,
 } from "@/lib/open-meteo";
 
 const OWM_BASE = "https://api.openweathermap.org";
@@ -90,7 +91,7 @@ interface OwmCurrentResponse {
     temp_max: number;
     humidity: number;
   };
-  wind: { speed: number };
+  wind: { speed: number; deg?: number };
   dt: number;
   sys: { sunrise: number; sunset: number; country?: string };
   timezone: number;
@@ -107,7 +108,7 @@ interface OwmForecastItem {
     humidity: number;
   };
   weather: OwmWeatherDesc[];
-  wind: { speed: number };
+  wind: { speed: number; deg?: number };
   pop: number;
   rain?: { "3h"?: number };
   snow?: { "3h"?: number };
@@ -140,6 +141,7 @@ interface OwmOneCallResponse {
     humidity: number;
     uvi: number;
     wind_speed: number;
+    wind_deg?: number;
     weather: OwmWeatherDesc[];
   };
   hourly: {
@@ -148,6 +150,7 @@ interface OwmOneCallResponse {
     feels_like: number;
     humidity: number;
     wind_speed: number;
+    wind_deg?: number;
     pop: number;
     weather: OwmWeatherDesc[];
   }[];
@@ -159,6 +162,7 @@ interface OwmOneCallResponse {
     feels_like: { day: number };
     humidity: number;
     wind_speed: number;
+    wind_deg?: number;
     pop: number;
     rain?: number;
     snow?: number;
@@ -214,9 +218,11 @@ function mapOneCall(
   const tempMax: number[] = [];
   const tempMin: number[] = [];
   const feelsLikeMax: number[] = [];
+  const heatIndexMax: number[] = [];
   const precipProbability: number[] = [];
   const precipSum: number[] = [];
   const windSpeedMax: number[] = [];
+  const windDirection: (number | null)[] = [];
   const uvIndexMax: number[] = [];
   const sunrise: string[] = [];
   const sunset: string[] = [];
@@ -228,13 +234,28 @@ function mapOneCall(
     tempMax.push(day.temp.max);
     tempMin.push(day.temp.min);
     feelsLikeMax.push(day.feels_like.day);
+    heatIndexMax.push(computeHeatIndex(day.temp.max, day.humidity, unit));
     precipProbability.push(Math.round((day.pop ?? 0) * 100));
     const liquid = (day.rain ?? 0) + (day.snow ?? 0);
     precipSum.push(precipAmount(liquid, unit));
     windSpeedMax.push(windSpeed(day.wind_speed, unit));
+    windDirection.push(day.wind_deg ?? null);
     uvIndexMax.push(day.uvi ?? 0);
     sunrise.push(toOffsetIsoFromUnix(day.sunrise, offset));
     sunset.push(toOffsetIsoFromUnix(day.sunset, offset));
+  }
+
+  const hourlyHeatIndex = data.hourly.map((h) =>
+    computeHeatIndex(h.temp, h.humidity, unit)
+  );
+  for (let i = 0; i < dates.length; i++) {
+    const his: number[] = [];
+    for (let j = 0; j < data.hourly.length; j++) {
+      if (dateStringFromUnix(data.hourly[j].dt, offset) === dates[i]) {
+        his.push(hourlyHeatIndex[j]);
+      }
+    }
+    if (his.length) heatIndexMax[i] = Math.max(...his);
   }
 
   return {
@@ -245,9 +266,15 @@ function mapOneCall(
     current: {
       temperature: data.current.temp,
       feelsLike: data.current.feels_like,
+      heatIndex: computeHeatIndex(
+        data.current.temp,
+        data.current.humidity,
+        unit
+      ),
       humidity: data.current.humidity,
       weatherCode: data.current.weather[0]?.id ?? 800,
       windSpeed: windSpeed(data.current.wind_speed, unit),
+      windDirection: data.current.wind_deg ?? null,
       time: toOffsetIsoFromUnix(data.current.dt, offset),
     },
     daily: {
@@ -256,9 +283,11 @@ function mapOneCall(
       tempMax,
       tempMin,
       feelsLikeMax,
+      heatIndexMax,
       precipProbability,
       precipSum,
       windSpeedMax,
+      windDirection,
       uvIndexMax,
       sunrise,
       sunset,
@@ -267,12 +296,14 @@ function mapOneCall(
       times: data.hourly.map((h) => toOffsetIsoFromUnix(h.dt, offset)),
       temperatures: data.hourly.map((h) => h.temp),
       feelsLike: data.hourly.map((h) => h.feels_like),
+      heatIndex: hourlyHeatIndex,
       humidity: data.hourly.map((h) => h.humidity),
       precipProbability: data.hourly.map((h) =>
         Math.round((h.pop ?? 0) * 100)
       ),
       weatherCodes: data.hourly.map((h) => h.weather[0]?.id ?? 800),
       windSpeed: data.hourly.map((h) => windSpeed(h.wind_speed, unit)),
+      windDirection: data.hourly.map((h) => h.wind_deg ?? null),
     },
   };
 }
@@ -291,25 +322,31 @@ function mapForecast25(
     tempMax: number;
     tempMin: number;
     feelsMax: number;
+    heatIndexMax: number;
     popMax: number;
     precip: number;
     windMax: number;
+    windDir: number | null;
   };
 
   const byDate = new Map<string, DayAcc>();
   const hourlyTimes: string[] = [];
   const hourlyTemps: number[] = [];
   const hourlyFeels: number[] = [];
+  const hourlyHeatIndex: number[] = [];
   const hourlyHumidity: number[] = [];
   const hourlyPrecip: number[] = [];
   const hourlyCodes: number[] = [];
   const hourlyWind: number[] = [];
+  const hourlyWindDir: (number | null)[] = [];
 
   for (const item of forecast.list) {
     const date = dateStringFromUnix(item.dt, offset);
     const code = item.weather[0]?.id ?? 800;
     const precipMm = (item.rain?.["3h"] ?? 0) + (item.snow?.["3h"] ?? 0);
     const wind = windSpeed(item.wind.speed, unit);
+    const deg = item.wind.deg ?? null;
+    const hi = computeHeatIndex(item.main.temp, item.main.humidity, unit);
 
     const existing = byDate.get(date);
     if (!existing) {
@@ -319,27 +356,35 @@ function mapForecast25(
         tempMax: item.main.temp_max,
         tempMin: item.main.temp_min,
         feelsMax: item.main.feels_like,
+        heatIndexMax: hi,
         popMax: item.pop ?? 0,
         precip: precipMm,
         windMax: wind,
+        windDir: deg,
       });
     } else {
       existing.codes.push(code);
       existing.tempMax = Math.max(existing.tempMax, item.main.temp_max);
       existing.tempMin = Math.min(existing.tempMin, item.main.temp_min);
       existing.feelsMax = Math.max(existing.feelsMax, item.main.feels_like);
+      existing.heatIndexMax = Math.max(existing.heatIndexMax, hi);
       existing.popMax = Math.max(existing.popMax, item.pop ?? 0);
       existing.precip += precipMm;
-      existing.windMax = Math.max(existing.windMax, wind);
+      if (wind > existing.windMax) {
+        existing.windMax = wind;
+        existing.windDir = deg;
+      }
     }
 
     hourlyTimes.push(toOffsetIsoFromUnix(item.dt, offset));
     hourlyTemps.push(item.main.temp);
     hourlyFeels.push(item.main.feels_like);
+    hourlyHeatIndex.push(hi);
     hourlyHumidity.push(item.main.humidity);
     hourlyPrecip.push(Math.round((item.pop ?? 0) * 100));
     hourlyCodes.push(code);
     hourlyWind.push(wind);
+    hourlyWindDir.push(deg);
   }
 
   const days = [...byDate.values()];
@@ -354,9 +399,15 @@ function mapForecast25(
     current: {
       temperature: current.main.temp,
       feelsLike: current.main.feels_like,
+      heatIndex: computeHeatIndex(
+        current.main.temp,
+        current.main.humidity,
+        unit
+      ),
       humidity: current.main.humidity,
       weatherCode: current.weather[0]?.id ?? 800,
       windSpeed: windSpeed(current.wind.speed, unit),
+      windDirection: current.wind.deg ?? null,
       time: toOffsetIsoFromUnix(current.dt, offset),
     },
     daily: {
@@ -365,9 +416,11 @@ function mapForecast25(
       tempMax: days.map((d) => d.tempMax),
       tempMin: days.map((d) => d.tempMin),
       feelsLikeMax: days.map((d) => d.feelsMax),
+      heatIndexMax: days.map((d) => d.heatIndexMax),
       precipProbability: days.map((d) => Math.round(d.popMax * 100)),
       precipSum: days.map((d) => precipAmount(d.precip, unit)),
       windSpeedMax: days.map((d) => d.windMax),
+      windDirection: days.map((d) => d.windDir),
       uvIndexMax: days.map(() => 0),
       sunrise: days.map((d) =>
         wallClockOnDate(d.date, forecast.city.sunrise, offset)
@@ -380,10 +433,12 @@ function mapForecast25(
       times: hourlyTimes,
       temperatures: hourlyTemps,
       feelsLike: hourlyFeels,
+      heatIndex: hourlyHeatIndex,
       humidity: hourlyHumidity,
       precipProbability: hourlyPrecip,
       weatherCodes: hourlyCodes,
       windSpeed: hourlyWind,
+      windDirection: hourlyWindDir,
     },
   };
 }

@@ -17,6 +17,98 @@ export function formatWindSpeed(
     : `${Math.round(speed)} km/h`;
 }
 
+const COMPASS_POINTS = [
+  "N",
+  "NNE",
+  "NE",
+  "ENE",
+  "E",
+  "ESE",
+  "SE",
+  "SSE",
+  "S",
+  "SSW",
+  "SW",
+  "WSW",
+  "W",
+  "WNW",
+  "NW",
+  "NNW",
+] as const;
+
+/** Meteorological degrees (wind from) → 16-point compass. */
+export function degreesToCompass(degrees: number): string {
+  const normalized = ((degrees % 360) + 360) % 360;
+  return COMPASS_POINTS[Math.round(normalized / 22.5) % 16];
+}
+
+export function formatWindDirection(
+  degrees: number | null | undefined
+): string | null {
+  if (degrees == null || Number.isNaN(degrees)) return null;
+  return degreesToCompass(degrees);
+}
+
+export function formatWind(
+  speed: number,
+  unit: TemperatureUnit,
+  degrees?: number | null
+): string {
+  const speedLabel = formatWindSpeed(speed, unit);
+  const dir = formatWindDirection(degrees);
+  return dir ? `${speedLabel} ${dir}` : speedLabel;
+}
+
+function toFahrenheit(temp: number, unit: TemperatureUnit): number {
+  return unit === "fahrenheit" ? temp : (temp * 9) / 5 + 32;
+}
+
+function fromFahrenheit(tempF: number, unit: TemperatureUnit): number {
+  return unit === "fahrenheit" ? tempF : ((tempF - 32) * 5) / 9;
+}
+
+/**
+ * NWS heat index. Uses the Rothfusz regression at or above 80°F,
+ * otherwise the Steadman approximation (near air temperature).
+ */
+export function computeHeatIndex(
+  temperature: number,
+  humidity: number,
+  unit: TemperatureUnit
+): number {
+  const tempF = toFahrenheit(temperature, unit);
+  const rh = Math.max(0, Math.min(100, humidity));
+  return fromFahrenheit(heatIndexFahrenheit(tempF, rh), unit);
+}
+
+function heatIndexFahrenheit(tempF: number, rh: number): number {
+  const simple =
+    0.5 * (tempF + 61.0 + (tempF - 68.0) * 1.2 + rh * 0.094);
+
+  if (tempF < 80 || simple < 80) {
+    return simple;
+  }
+
+  let hi =
+    -42.379 +
+    2.04901523 * tempF +
+    10.14333127 * rh -
+    0.22475541 * tempF * rh -
+    0.00683783 * tempF * tempF -
+    0.05481717 * rh * rh +
+    0.00122874 * tempF * tempF * rh +
+    0.00085282 * tempF * rh * rh -
+    0.00000199 * tempF * tempF * rh * rh;
+
+  if (rh < 13 && tempF <= 112) {
+    hi -= ((13 - rh) / 4) * Math.sqrt((17 - Math.abs(tempF - 95)) / 17);
+  } else if (rh > 85 && tempF <= 87) {
+    hi += ((rh - 85) / 10) * ((87 - tempF) / 5);
+  }
+
+  return hi;
+}
+
 export function formatPrecipSum(
   amount: number,
   unit: TemperatureUnit
@@ -47,9 +139,12 @@ export interface DailyForecast {
   tempMax: number[];
   tempMin: number[];
   feelsLikeMax: number[];
+  heatIndexMax: number[];
   precipProbability: number[];
   precipSum: number[];
   windSpeedMax: number[];
+  /** Degrees, wind origin at the day's strongest wind. */
+  windDirection: (number | null)[];
   uvIndexMax: number[];
   sunrise: string[];
   sunset: string[];
@@ -59,18 +154,23 @@ export interface HourlyForecast {
   times: string[];
   temperatures: number[];
   feelsLike: number[];
+  heatIndex: number[];
   humidity: number[];
   precipProbability: number[];
   weatherCodes: number[];
   windSpeed: number[];
+  windDirection: (number | null)[];
 }
 
 export interface CurrentWeather {
   temperature: number;
   feelsLike: number;
+  heatIndex: number;
   humidity: number;
   weatherCode: number;
   windSpeed: number;
+  /** Degrees, wind origin (meteorological). */
+  windDirection: number | null;
   time: string;
 }
 
@@ -91,19 +191,23 @@ export interface DayDetail {
   tempMax: number;
   tempMin: number;
   feelsLikeMax: number;
+  heatIndexMax: number;
   precipProbability: number;
   precipSum: number;
   windSpeedMax: number;
+  windDirection: number | null;
   uvIndexMax: number;
   sunrise: string;
   sunset: string;
   hourly: {
     time: string;
     temperature: number;
+    heatIndex: number;
     humidity: number;
     precipProbability: number;
     weatherCode: number;
     windSpeed: number;
+    windDirection: number | null;
   }[];
 }
 
@@ -177,7 +281,14 @@ export function forecastLocalIsoToUtcMs(
 export function getLocationCurrentWeather(
   forecast: ForecastData
 ): CurrentWeather | null {
-  if (forecast.current) return forecast.current;
+  if (forecast.current) {
+    const current = forecast.current;
+    return {
+      ...current,
+      heatIndex: current.heatIndex ?? current.temperature,
+      windDirection: current.windDirection ?? null,
+    };
+  }
 
   const { hourly, utcOffsetSeconds } = forecast;
   if (!hourly.times.length) return null;
@@ -196,12 +307,16 @@ export function getLocationCurrentWeather(
     }
   }
 
+  const temperature = hourly.temperatures[bestIndex];
+  const humidity = hourly.humidity[bestIndex];
   return {
-    temperature: hourly.temperatures[bestIndex],
-    feelsLike: hourly.feelsLike[bestIndex] ?? hourly.temperatures[bestIndex],
-    humidity: hourly.humidity[bestIndex],
+    temperature,
+    feelsLike: hourly.feelsLike[bestIndex] ?? temperature,
+    heatIndex: hourly.heatIndex?.[bestIndex] ?? temperature,
+    humidity,
     weatherCode: hourly.weatherCodes[bestIndex],
     windSpeed: hourly.windSpeed[bestIndex],
+    windDirection: hourly.windDirection?.[bestIndex] ?? null,
     time: hourly.times[bestIndex],
   };
 }
@@ -228,10 +343,12 @@ export function getDayDetail(forecast: ForecastData, index: number): DayDetail {
     .map(({ time, i }) => ({
       time,
       temperature: hourly.temperatures[i],
+      heatIndex: hourly.heatIndex?.[i] ?? hourly.temperatures[i],
       humidity: hourly.humidity[i],
       precipProbability: hourly.precipProbability[i],
       weatherCode: hourly.weatherCodes[i],
       windSpeed: hourly.windSpeed[i],
+      windDirection: hourly.windDirection?.[i] ?? null,
     }));
 
   return {
@@ -241,9 +358,11 @@ export function getDayDetail(forecast: ForecastData, index: number): DayDetail {
     tempMax: daily.tempMax[index],
     tempMin: daily.tempMin[index],
     feelsLikeMax: daily.feelsLikeMax[index],
+    heatIndexMax: daily.heatIndexMax?.[index] ?? daily.tempMax[index],
     precipProbability: daily.precipProbability[index],
     precipSum: daily.precipSum[index],
     windSpeedMax: daily.windSpeedMax[index],
+    windDirection: daily.windDirection?.[index] ?? null,
     uvIndexMax: daily.uvIndexMax[index],
     sunrise: daily.sunrise[index],
     sunset: daily.sunset[index],

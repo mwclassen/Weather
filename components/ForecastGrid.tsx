@@ -29,8 +29,10 @@ export function ForecastGrid({
               tempMax={daily.tempMax[i]}
               tempMin={daily.tempMin[i]}
               feelsLikeMax={daily.feelsLikeMax[i]}
+              heatIndexMax={daily.heatIndexMax?.[i] ?? daily.tempMax[i]}
               precip={daily.precipProbability[i]}
               wind={daily.windSpeedMax[i]}
+              windDirection={daily.windDirection?.[i] ?? null}
               timezone={timezone}
               unit={unit}
               index={i}

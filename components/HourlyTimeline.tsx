@@ -2,6 +2,7 @@
 
 import {
   formatHour,
+  formatWindDirection,
   temperatureUnitLabel,
   weatherCodeToIcon,
   type DayDetail,
@@ -36,6 +37,7 @@ export function HourlyTimeline({
         <div className="flex gap-2 min-w-max pb-2">
           {hourly.map((slot) => {
             const heightPct = ((slot.temperature - min) / range) * 100;
+            const dir = formatWindDirection(slot.windDirection);
             return (
               <div
                 key={slot.time}
@@ -54,6 +56,13 @@ export function HourlyTimeline({
                   {Math.round(slot.temperature)}
                   {unitLabel}
                 </span>
+                <span
+                  className="font-mono text-[9px] text-warning tabular-nums"
+                  title="Heat index"
+                >
+                  {Math.round(slot.heatIndex)}
+                  {unitLabel}
+                </span>
                 <WeatherIcon
                   type={weatherCodeToIcon(slot.weatherCode)}
                   className="w-4 h-4"
@@ -61,6 +70,14 @@ export function HourlyTimeline({
                 <span className="font-mono text-[9px] text-text-dim">
                   {slot.precipProbability ?? 0}%
                 </span>
+                {dir && (
+                  <span
+                    className="font-mono text-[9px] text-text-muted"
+                    title={`Wind from ${dir}`}
+                  >
+                    {dir}
+                  </span>
+                )}
               </div>
             );
           })}

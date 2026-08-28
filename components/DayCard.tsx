@@ -2,7 +2,7 @@
 
 import {
   formatDate,
-  formatWindSpeed,
+  formatWind,
   isToday,
   temperatureUnitLabel,
   weatherCodeToIcon,
@@ -18,8 +18,10 @@ export function DayCard({
   tempMax,
   tempMin,
   feelsLikeMax,
+  heatIndexMax,
   precip,
   wind,
+  windDirection,
   timezone,
   unit,
   index,
@@ -31,8 +33,10 @@ export function DayCard({
   tempMax: number;
   tempMin: number;
   feelsLikeMax: number;
+  heatIndexMax: number;
   precip: number;
   wind: number;
+  windDirection: number | null;
   timezone: string;
   unit: TemperatureUnit;
   index: number;
@@ -84,6 +88,13 @@ export function DayCard({
           Feels like {Math.round(feelsLikeMax)}
           {unitLabel}
         </span>
+        <span
+          className="text-[10px] text-warning tabular-nums"
+          title="Heat index"
+        >
+          HI {Math.round(heatIndexMax)}
+          {unitLabel}
+        </span>
       </div>
 
       <div className="mt-auto space-y-1.5 font-mono text-[10px] text-text-muted">
@@ -93,7 +104,7 @@ export function DayCard({
         </div>
         <div className="flex items-center gap-1.5">
           <Wind className="w-3 h-3 text-accent-dim" />
-          <span>{formatWindSpeed(wind, unit)}</span>
+          <span>{formatWind(wind, unit, windDirection)}</span>
         </div>
       </div>
       <p className="font-mono text-[9px] text-text-dim text-center mt-1">

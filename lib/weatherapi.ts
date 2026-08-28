@@ -1,7 +1,8 @@
-import type {
-  ForecastData,
-  GeoResult,
-  TemperatureUnit,
+import {
+  computeHeatIndex,
+  type ForecastData,
+  type GeoResult,
+  type TemperatureUnit,
 } from "@/lib/open-meteo";
 
 const WEATHERAPI_BASE = "https://api.weatherapi.com/v1";
@@ -44,6 +45,9 @@ interface WeatherApiHour {
   condition: WeatherApiCondition;
   wind_mph: number;
   wind_kph: number;
+  wind_degree: number;
+  heatindex_c: number;
+  heatindex_f: number;
 }
 
 interface WeatherApiDay {
@@ -91,6 +95,9 @@ interface WeatherApiForecastResponse {
     humidity: number;
     wind_mph: number;
     wind_kph: number;
+    wind_degree: number;
+    heatindex_c?: number;
+    heatindex_f?: number;
   };
   forecast: {
     forecastday: WeatherApiDay[];
@@ -231,9 +238,11 @@ export async function fetchWeatherApiForecast(
   const tempMax: number[] = [];
   const tempMin: number[] = [];
   const feelsLikeMax: number[] = [];
+  const heatIndexMax: number[] = [];
   const precipProbability: number[] = [];
   const precipSum: number[] = [];
   const windSpeedMax: number[] = [];
+  const windDirection: (number | null)[] = [];
   const uvIndexMax: number[] = [];
   const sunrise: string[] = [];
   const sunset: string[] = [];
@@ -241,10 +250,12 @@ export async function fetchWeatherApiForecast(
   const hourlyTimes: string[] = [];
   const hourlyTemps: number[] = [];
   const hourlyFeels: number[] = [];
+  const hourlyHeatIndex: number[] = [];
   const hourlyHumidity: number[] = [];
   const hourlyPrecip: number[] = [];
   const hourlyCodes: number[] = [];
   const hourlyWind: number[] = [];
+  const hourlyWindDir: (number | null)[] = [];
 
   for (const day of days) {
     dates.push(day.date);
@@ -265,34 +276,77 @@ export async function fetchWeatherApiForecast(
     );
 
     let dayFeelsMax = imperial ? day.day.maxtemp_f : day.day.maxtemp_c;
+    let dayHeatMax = Number.NEGATIVE_INFINITY;
+    let dayWindDir: number | null = null;
+    let dayWindMax = -1;
 
     for (const hour of day.hour) {
+      const temp = imperial ? hour.temp_f : hour.temp_c;
       const feels = imperial ? hour.feelslike_f : hour.feelslike_c;
+      const apiHi = imperial ? hour.heatindex_f : hour.heatindex_c;
+      const hi =
+        typeof apiHi === "number" && !Number.isNaN(apiHi)
+          ? apiHi
+          : computeHeatIndex(temp, hour.humidity, unit);
+      const wind = imperial ? hour.wind_mph : hour.wind_kph;
+      const deg = hour.wind_degree ?? null;
+
       dayFeelsMax = Math.max(dayFeelsMax, feels);
+      dayHeatMax = Math.max(dayHeatMax, hi);
+      if (wind > dayWindMax) {
+        dayWindMax = wind;
+        dayWindDir = deg;
+      }
 
       hourlyTimes.push(toOffsetIso(toLocalIso(hour.time), utcOffsetSeconds));
-      hourlyTemps.push(imperial ? hour.temp_f : hour.temp_c);
+      hourlyTemps.push(temp);
       hourlyFeels.push(feels);
+      hourlyHeatIndex.push(hi);
       hourlyHumidity.push(hour.humidity);
       hourlyPrecip.push(
         Math.max(hour.chance_of_rain ?? 0, hour.chance_of_snow ?? 0)
       );
       hourlyCodes.push(toOwmLikeCode(hour.condition.code));
-      hourlyWind.push(imperial ? hour.wind_mph : hour.wind_kph);
+      hourlyWind.push(wind);
+      hourlyWindDir.push(deg);
     }
 
     feelsLikeMax.push(dayFeelsMax);
+    heatIndexMax.push(
+      Number.isFinite(dayHeatMax)
+        ? dayHeatMax
+        : imperial
+          ? day.day.maxtemp_f
+          : day.day.maxtemp_c
+    );
+    windDirection.push(dayWindDir);
   }
+
+  const currentTemp = data.current
+    ? imperial
+      ? data.current.temp_f
+      : data.current.temp_c
+    : 0;
+  const currentHiApi = data.current
+    ? imperial
+      ? data.current.heatindex_f
+      : data.current.heatindex_c
+    : undefined;
 
   const current = data.current
     ? {
-        temperature: imperial ? data.current.temp_f : data.current.temp_c,
+        temperature: currentTemp,
         feelsLike: imperial
           ? data.current.feelslike_f
           : data.current.feelslike_c,
+        heatIndex:
+          typeof currentHiApi === "number" && !Number.isNaN(currentHiApi)
+            ? currentHiApi
+            : computeHeatIndex(currentTemp, data.current.humidity, unit),
         humidity: data.current.humidity,
         weatherCode: toOwmLikeCode(data.current.condition.code),
         windSpeed: imperial ? data.current.wind_mph : data.current.wind_kph,
+        windDirection: data.current.wind_degree ?? null,
         time: toOffsetIso(toLocalIso(data.current.last_updated), utcOffsetSeconds),
       }
     : null;
@@ -309,9 +363,11 @@ export async function fetchWeatherApiForecast(
       tempMax,
       tempMin,
       feelsLikeMax,
+      heatIndexMax,
       precipProbability,
       precipSum,
       windSpeedMax,
+      windDirection,
       uvIndexMax,
       sunrise,
       sunset,
@@ -320,10 +376,12 @@ export async function fetchWeatherApiForecast(
       times: hourlyTimes,
       temperatures: hourlyTemps,
       feelsLike: hourlyFeels,
+      heatIndex: hourlyHeatIndex,
       humidity: hourlyHumidity,
       precipProbability: hourlyPrecip,
       weatherCodes: hourlyCodes,
       windSpeed: hourlyWind,
+      windDirection: hourlyWindDir,
     },
   };
 }

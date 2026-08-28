@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Droplets, Star, Wind } from "lucide-react";
+import { Droplets, Navigation, Star, ThermometerSun, Wind } from "lucide-react";
 import {
   formatCityLabel,
   formatTime,
-  formatWindSpeed,
+  formatWind,
+  formatWindDirection,
   getLocationCurrentWeather,
   temperatureUnitLabel,
   weatherCodeToIcon,
@@ -146,14 +147,36 @@ export function ForecastHero({
       )}
 
       {current && (
-        <div className="flex gap-6 mt-6 pt-4 border-t border-border font-mono text-xs text-text-muted">
+        <div className="flex flex-wrap gap-x-6 gap-y-2 mt-6 pt-4 border-t border-border font-mono text-xs text-text-muted">
           <span className="flex items-center gap-1.5">
             <Droplets className="w-3.5 h-3.5 text-accent-dim" />
             {current.humidity}% humidity
           </span>
-          <span className="flex items-center gap-1.5">
+          <span
+            className="flex items-center gap-1.5"
+            title="Heat index from air temperature and humidity"
+          >
+            <ThermometerSun className="w-3.5 h-3.5 text-accent-dim" />
+            Heat index {Math.round(current.heatIndex ?? current.temperature)}
+            {unitLabel}
+          </span>
+          <span
+            className="flex items-center gap-1.5"
+            title={
+              current.windDirection != null
+                ? `Wind from ${formatWindDirection(current.windDirection)}`
+                : "Wind speed"
+            }
+          >
             <Wind className="w-3.5 h-3.5 text-accent-dim" />
-            {formatWindSpeed(current.windSpeed, unit)} wind
+            {formatWind(current.windSpeed, unit, current.windDirection)}
+            {current.windDirection != null && (
+              <Navigation
+                className="w-3 h-3 text-accent-dim shrink-0"
+                style={{ transform: `rotate(${current.windDirection}deg)` }}
+                aria-hidden
+              />
+            )}
           </span>
           <a
             href={getDeviceMapUrl(
