@@ -63,6 +63,13 @@ export function HourlyTimeline({
                   {Math.round(slot.heatIndex)}
                   {unitLabel}
                 </span>
+                <span
+                  className="font-mono text-[9px] text-text-muted tabular-nums"
+                  title="Dew point"
+                >
+                  {Math.round(slot.dewPoint)}
+                  {unitLabel}
+                </span>
                 <WeatherIcon
                   type={weatherCodeToIcon(slot.weatherCode)}
                   className="w-4 h-4"

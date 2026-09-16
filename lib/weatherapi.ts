@@ -1,4 +1,5 @@
 import {
+  computeDewPoint,
   computeHeatIndex,
   type ForecastData,
   type GeoResult,
@@ -48,6 +49,8 @@ interface WeatherApiHour {
   wind_degree: number;
   heatindex_c: number;
   heatindex_f: number;
+  dewpoint_c?: number;
+  dewpoint_f?: number;
 }
 
 interface WeatherApiDay {
@@ -98,6 +101,8 @@ interface WeatherApiForecastResponse {
     wind_degree: number;
     heatindex_c?: number;
     heatindex_f?: number;
+    dewpoint_c?: number;
+    dewpoint_f?: number;
   };
   forecast: {
     forecastday: WeatherApiDay[];
@@ -239,6 +244,7 @@ export async function fetchWeatherApiForecast(
   const tempMin: number[] = [];
   const feelsLikeMax: number[] = [];
   const heatIndexMax: number[] = [];
+  const dewPointMax: number[] = [];
   const precipProbability: number[] = [];
   const precipSum: number[] = [];
   const windSpeedMax: number[] = [];
@@ -251,6 +257,7 @@ export async function fetchWeatherApiForecast(
   const hourlyTemps: number[] = [];
   const hourlyFeels: number[] = [];
   const hourlyHeatIndex: number[] = [];
+  const hourlyDewPoint: number[] = [];
   const hourlyHumidity: number[] = [];
   const hourlyPrecip: number[] = [];
   const hourlyCodes: number[] = [];
@@ -277,6 +284,7 @@ export async function fetchWeatherApiForecast(
 
     let dayFeelsMax = imperial ? day.day.maxtemp_f : day.day.maxtemp_c;
     let dayHeatMax = Number.NEGATIVE_INFINITY;
+    let dayDewMax = Number.NEGATIVE_INFINITY;
     let dayWindDir: number | null = null;
     let dayWindMax = -1;
 
@@ -288,11 +296,17 @@ export async function fetchWeatherApiForecast(
         typeof apiHi === "number" && !Number.isNaN(apiHi)
           ? apiHi
           : computeHeatIndex(temp, hour.humidity, unit);
+      const apiDp = imperial ? hour.dewpoint_f : hour.dewpoint_c;
+      const dew =
+        typeof apiDp === "number" && !Number.isNaN(apiDp)
+          ? apiDp
+          : computeDewPoint(temp, hour.humidity, unit);
       const wind = imperial ? hour.wind_mph : hour.wind_kph;
       const deg = hour.wind_degree ?? null;
 
       dayFeelsMax = Math.max(dayFeelsMax, feels);
       dayHeatMax = Math.max(dayHeatMax, hi);
+      dayDewMax = Math.max(dayDewMax, dew);
       if (wind > dayWindMax) {
         dayWindMax = wind;
         dayWindDir = deg;
@@ -302,6 +316,7 @@ export async function fetchWeatherApiForecast(
       hourlyTemps.push(temp);
       hourlyFeels.push(feels);
       hourlyHeatIndex.push(hi);
+      hourlyDewPoint.push(dew);
       hourlyHumidity.push(hour.humidity);
       hourlyPrecip.push(
         Math.max(hour.chance_of_rain ?? 0, hour.chance_of_snow ?? 0)
@@ -319,6 +334,13 @@ export async function fetchWeatherApiForecast(
           ? day.day.maxtemp_f
           : day.day.maxtemp_c
     );
+    dewPointMax.push(
+      Number.isFinite(dayDewMax)
+        ? dayDewMax
+        : imperial
+          ? day.day.mintemp_f
+          : day.day.mintemp_c
+    );
     windDirection.push(dayWindDir);
   }
 
@@ -332,6 +354,11 @@ export async function fetchWeatherApiForecast(
       ? data.current.heatindex_f
       : data.current.heatindex_c
     : undefined;
+  const currentDpApi = data.current
+    ? imperial
+      ? data.current.dewpoint_f
+      : data.current.dewpoint_c
+    : undefined;
 
   const current = data.current
     ? {
@@ -343,6 +370,10 @@ export async function fetchWeatherApiForecast(
           typeof currentHiApi === "number" && !Number.isNaN(currentHiApi)
             ? currentHiApi
             : computeHeatIndex(currentTemp, data.current.humidity, unit),
+        dewPoint:
+          typeof currentDpApi === "number" && !Number.isNaN(currentDpApi)
+            ? currentDpApi
+            : computeDewPoint(currentTemp, data.current.humidity, unit),
         humidity: data.current.humidity,
         weatherCode: toOwmLikeCode(data.current.condition.code),
         windSpeed: imperial ? data.current.wind_mph : data.current.wind_kph,
@@ -364,6 +395,7 @@ export async function fetchWeatherApiForecast(
       tempMin,
       feelsLikeMax,
       heatIndexMax,
+      dewPointMax,
       precipProbability,
       precipSum,
       windSpeedMax,
@@ -377,6 +409,7 @@ export async function fetchWeatherApiForecast(
       temperatures: hourlyTemps,
       feelsLike: hourlyFeels,
       heatIndex: hourlyHeatIndex,
+      dewPoint: hourlyDewPoint,
       humidity: hourlyHumidity,
       precipProbability: hourlyPrecip,
       weatherCodes: hourlyCodes,

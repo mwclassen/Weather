@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Navigation,
+  Droplet,
 } from "lucide-react";
 import {
   formatDateLong,
@@ -185,6 +186,10 @@ export function DayDetailPanel({
                   HI {Math.round(detail.heatIndexMax)}
                   {unitLabel}
                 </span>
+                <span className="text-sm text-text-muted tabular-nums">
+                  DP {Math.round(detail.dewPointMax)}
+                  {unitLabel}
+                </span>
                 <span className="text-xs text-text-muted">
                   ±{tempSpread}
                   {unitLabel} range
@@ -193,7 +198,7 @@ export function DayDetailPanel({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             <StatCard
               icon={<Droplets className="w-4 h-4" />}
               label="Precip chance"
@@ -217,6 +222,11 @@ export function DayDetailPanel({
               icon={<ThermometerSun className="w-4 h-4" />}
               label="Heat index"
               value={`${Math.round(detail.heatIndexMax)}${unitLabel}`}
+            />
+            <StatCard
+              icon={<Droplet className="w-4 h-4" />}
+              label="Dew point"
+              value={`${Math.round(detail.dewPointMax)}${unitLabel}`}
             />
             <StatCard
               icon={<SunMedium className="w-4 h-4" />}
@@ -251,18 +261,19 @@ export function DayDetailPanel({
                   Hour-by-hour
                 </h3>
                 <ul className="space-y-1 max-h-64 lg:max-h-80 overflow-y-auto pr-1">
-                  <li className="grid grid-cols-[3.5rem_1.25rem_2.75rem_2.75rem_2.25rem_1fr] sm:grid-cols-[4.5rem_1.5rem_3.25rem_3.25rem_2.5rem_1fr] items-center gap-2 px-3 pb-1 font-mono text-[10px] text-text-dim uppercase tracking-wider">
+                  <li className="grid grid-cols-[3.5rem_1.25rem_2.5rem_2.5rem_2.5rem_2.25rem_1fr] sm:grid-cols-[4.5rem_1.5rem_3rem_3rem_3rem_2.5rem_1fr] items-center gap-2 px-3 pb-1 font-mono text-[10px] text-text-dim uppercase tracking-wider">
                     <span>Time</span>
                     <span />
                     <span>Temp</span>
                     <span>HI</span>
+                    <span>DP</span>
                     <span>Rain</span>
                     <span className="text-right">Wind</span>
                   </li>
                   {detail.hourly.map((slot) => (
                     <li
                       key={slot.time}
-                      className="grid grid-cols-[3.5rem_1.25rem_2.75rem_2.75rem_2.25rem_1fr] sm:grid-cols-[4.5rem_1.5rem_3.25rem_3.25rem_2.5rem_1fr] items-center gap-2 py-2 px-3 rounded-md hover:bg-bg-card font-mono text-xs"
+                      className="grid grid-cols-[3.5rem_1.25rem_2.5rem_2.5rem_2.5rem_2.25rem_1fr] sm:grid-cols-[4.5rem_1.5rem_3rem_3rem_3rem_2.5rem_1fr] items-center gap-2 py-2 px-3 rounded-md hover:bg-bg-card font-mono text-xs"
                     >
                       <span className="text-text-muted">
                         {formatTime(slot.time, timezone)}
@@ -280,6 +291,13 @@ export function DayDetailPanel({
                         title="Heat index"
                       >
                         {Math.round(slot.heatIndex)}
+                        {unitLabel}
+                      </span>
+                      <span
+                        className="text-text-muted tabular-nums"
+                        title="Dew point"
+                      >
+                        {Math.round(slot.dewPoint)}
                         {unitLabel}
                       </span>
                       <span className="text-text-dim">

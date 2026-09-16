@@ -1,4 +1,5 @@
 import {
+  computeDewPoint,
   computeHeatIndex,
   type ForecastData,
   type GeoResult,
@@ -142,6 +143,7 @@ interface OwmOneCallResponse {
     uvi: number;
     wind_speed: number;
     wind_deg?: number;
+    dew_point?: number;
     weather: OwmWeatherDesc[];
   };
   hourly: {
@@ -151,6 +153,7 @@ interface OwmOneCallResponse {
     humidity: number;
     wind_speed: number;
     wind_deg?: number;
+    dew_point?: number;
     pop: number;
     weather: OwmWeatherDesc[];
   }[];
@@ -163,6 +166,7 @@ interface OwmOneCallResponse {
     humidity: number;
     wind_speed: number;
     wind_deg?: number;
+    dew_point?: number;
     pop: number;
     rain?: number;
     snow?: number;
@@ -219,6 +223,7 @@ function mapOneCall(
   const tempMin: number[] = [];
   const feelsLikeMax: number[] = [];
   const heatIndexMax: number[] = [];
+  const dewPointMax: number[] = [];
   const precipProbability: number[] = [];
   const precipSum: number[] = [];
   const windSpeedMax: number[] = [];
@@ -235,6 +240,11 @@ function mapOneCall(
     tempMin.push(day.temp.min);
     feelsLikeMax.push(day.feels_like.day);
     heatIndexMax.push(computeHeatIndex(day.temp.max, day.humidity, unit));
+    dewPointMax.push(
+      typeof day.dew_point === "number" && !Number.isNaN(day.dew_point)
+        ? day.dew_point
+        : computeDewPoint(day.temp.max, day.humidity, unit)
+    );
     precipProbability.push(Math.round((day.pop ?? 0) * 100));
     const liquid = (day.rain ?? 0) + (day.snow ?? 0);
     precipSum.push(precipAmount(liquid, unit));
@@ -248,14 +258,22 @@ function mapOneCall(
   const hourlyHeatIndex = data.hourly.map((h) =>
     computeHeatIndex(h.temp, h.humidity, unit)
   );
+  const hourlyDewPoint = data.hourly.map((h) =>
+    typeof h.dew_point === "number" && !Number.isNaN(h.dew_point)
+      ? h.dew_point
+      : computeDewPoint(h.temp, h.humidity, unit)
+  );
   for (let i = 0; i < dates.length; i++) {
     const his: number[] = [];
+    const dps: number[] = [];
     for (let j = 0; j < data.hourly.length; j++) {
       if (dateStringFromUnix(data.hourly[j].dt, offset) === dates[i]) {
         his.push(hourlyHeatIndex[j]);
+        dps.push(hourlyDewPoint[j]);
       }
     }
     if (his.length) heatIndexMax[i] = Math.max(...his);
+    if (dps.length) dewPointMax[i] = Math.max(...dps);
   }
 
   return {
@@ -271,6 +289,15 @@ function mapOneCall(
         data.current.humidity,
         unit
       ),
+      dewPoint:
+        typeof data.current.dew_point === "number" &&
+        !Number.isNaN(data.current.dew_point)
+          ? data.current.dew_point
+          : computeDewPoint(
+              data.current.temp,
+              data.current.humidity,
+              unit
+            ),
       humidity: data.current.humidity,
       weatherCode: data.current.weather[0]?.id ?? 800,
       windSpeed: windSpeed(data.current.wind_speed, unit),
@@ -284,6 +311,7 @@ function mapOneCall(
       tempMin,
       feelsLikeMax,
       heatIndexMax,
+      dewPointMax,
       precipProbability,
       precipSum,
       windSpeedMax,
@@ -297,6 +325,7 @@ function mapOneCall(
       temperatures: data.hourly.map((h) => h.temp),
       feelsLike: data.hourly.map((h) => h.feels_like),
       heatIndex: hourlyHeatIndex,
+      dewPoint: hourlyDewPoint,
       humidity: data.hourly.map((h) => h.humidity),
       precipProbability: data.hourly.map((h) =>
         Math.round((h.pop ?? 0) * 100)
@@ -323,6 +352,7 @@ function mapForecast25(
     tempMin: number;
     feelsMax: number;
     heatIndexMax: number;
+    dewPointMax: number;
     popMax: number;
     precip: number;
     windMax: number;
@@ -334,6 +364,7 @@ function mapForecast25(
   const hourlyTemps: number[] = [];
   const hourlyFeels: number[] = [];
   const hourlyHeatIndex: number[] = [];
+  const hourlyDewPoint: number[] = [];
   const hourlyHumidity: number[] = [];
   const hourlyPrecip: number[] = [];
   const hourlyCodes: number[] = [];
@@ -347,6 +378,7 @@ function mapForecast25(
     const wind = windSpeed(item.wind.speed, unit);
     const deg = item.wind.deg ?? null;
     const hi = computeHeatIndex(item.main.temp, item.main.humidity, unit);
+    const dew = computeDewPoint(item.main.temp, item.main.humidity, unit);
 
     const existing = byDate.get(date);
     if (!existing) {
@@ -357,6 +389,7 @@ function mapForecast25(
         tempMin: item.main.temp_min,
         feelsMax: item.main.feels_like,
         heatIndexMax: hi,
+        dewPointMax: dew,
         popMax: item.pop ?? 0,
         precip: precipMm,
         windMax: wind,
@@ -368,6 +401,7 @@ function mapForecast25(
       existing.tempMin = Math.min(existing.tempMin, item.main.temp_min);
       existing.feelsMax = Math.max(existing.feelsMax, item.main.feels_like);
       existing.heatIndexMax = Math.max(existing.heatIndexMax, hi);
+      existing.dewPointMax = Math.max(existing.dewPointMax, dew);
       existing.popMax = Math.max(existing.popMax, item.pop ?? 0);
       existing.precip += precipMm;
       if (wind > existing.windMax) {
@@ -380,6 +414,7 @@ function mapForecast25(
     hourlyTemps.push(item.main.temp);
     hourlyFeels.push(item.main.feels_like);
     hourlyHeatIndex.push(hi);
+    hourlyDewPoint.push(dew);
     hourlyHumidity.push(item.main.humidity);
     hourlyPrecip.push(Math.round((item.pop ?? 0) * 100));
     hourlyCodes.push(code);
@@ -404,6 +439,11 @@ function mapForecast25(
         current.main.humidity,
         unit
       ),
+      dewPoint: computeDewPoint(
+        current.main.temp,
+        current.main.humidity,
+        unit
+      ),
       humidity: current.main.humidity,
       weatherCode: current.weather[0]?.id ?? 800,
       windSpeed: windSpeed(current.wind.speed, unit),
@@ -417,6 +457,7 @@ function mapForecast25(
       tempMin: days.map((d) => d.tempMin),
       feelsLikeMax: days.map((d) => d.feelsMax),
       heatIndexMax: days.map((d) => d.heatIndexMax),
+      dewPointMax: days.map((d) => d.dewPointMax),
       precipProbability: days.map((d) => Math.round(d.popMax * 100)),
       precipSum: days.map((d) => precipAmount(d.precip, unit)),
       windSpeedMax: days.map((d) => d.windMax),
@@ -434,6 +475,7 @@ function mapForecast25(
       temperatures: hourlyTemps,
       feelsLike: hourlyFeels,
       heatIndex: hourlyHeatIndex,
+      dewPoint: hourlyDewPoint,
       humidity: hourlyHumidity,
       precipProbability: hourlyPrecip,
       weatherCodes: hourlyCodes,

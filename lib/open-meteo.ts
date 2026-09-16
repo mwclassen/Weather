@@ -67,6 +67,14 @@ function fromFahrenheit(tempF: number, unit: TemperatureUnit): number {
   return unit === "fahrenheit" ? tempF : ((tempF - 32) * 5) / 9;
 }
 
+function toCelsius(temp: number, unit: TemperatureUnit): number {
+  return unit === "celsius" ? temp : ((temp - 32) * 5) / 9;
+}
+
+function fromCelsius(tempC: number, unit: TemperatureUnit): number {
+  return unit === "celsius" ? tempC : (tempC * 9) / 5 + 32;
+}
+
 /**
  * NWS heat index. Uses the Rothfusz regression at or above 80°F,
  * otherwise the Steadman approximation (near air temperature).
@@ -109,6 +117,22 @@ function heatIndexFahrenheit(tempF: number, rh: number): number {
   return hi;
 }
 
+/**
+ * Magnus-Tetens dew point from air temperature and relative humidity.
+ */
+export function computeDewPoint(
+  temperature: number,
+  humidity: number,
+  unit: TemperatureUnit
+): number {
+  const tempC = toCelsius(temperature, unit);
+  const rh = Math.max(0.1, Math.min(100, humidity));
+  const a = 17.625;
+  const b = 243.04;
+  const gamma = Math.log(rh / 100) + (a * tempC) / (b + tempC);
+  return fromCelsius((b * gamma) / (a - gamma), unit);
+}
+
 export function formatPrecipSum(
   amount: number,
   unit: TemperatureUnit
@@ -140,6 +164,7 @@ export interface DailyForecast {
   tempMin: number[];
   feelsLikeMax: number[];
   heatIndexMax: number[];
+  dewPointMax: number[];
   precipProbability: number[];
   precipSum: number[];
   windSpeedMax: number[];
@@ -155,6 +180,7 @@ export interface HourlyForecast {
   temperatures: number[];
   feelsLike: number[];
   heatIndex: number[];
+  dewPoint: number[];
   humidity: number[];
   precipProbability: number[];
   weatherCodes: number[];
@@ -166,6 +192,7 @@ export interface CurrentWeather {
   temperature: number;
   feelsLike: number;
   heatIndex: number;
+  dewPoint: number;
   humidity: number;
   weatherCode: number;
   windSpeed: number;
@@ -192,6 +219,7 @@ export interface DayDetail {
   tempMin: number;
   feelsLikeMax: number;
   heatIndexMax: number;
+  dewPointMax: number;
   precipProbability: number;
   precipSum: number;
   windSpeedMax: number;
@@ -203,6 +231,7 @@ export interface DayDetail {
     time: string;
     temperature: number;
     heatIndex: number;
+    dewPoint: number;
     humidity: number;
     precipProbability: number;
     weatherCode: number;
@@ -286,6 +315,7 @@ export function getLocationCurrentWeather(
     return {
       ...current,
       heatIndex: current.heatIndex ?? current.temperature,
+      dewPoint: current.dewPoint ?? current.temperature,
       windDirection: current.windDirection ?? null,
     };
   }
@@ -313,6 +343,7 @@ export function getLocationCurrentWeather(
     temperature,
     feelsLike: hourly.feelsLike[bestIndex] ?? temperature,
     heatIndex: hourly.heatIndex?.[bestIndex] ?? temperature,
+    dewPoint: hourly.dewPoint?.[bestIndex] ?? temperature,
     humidity,
     weatherCode: hourly.weatherCodes[bestIndex],
     windSpeed: hourly.windSpeed[bestIndex],
@@ -344,6 +375,7 @@ export function getDayDetail(forecast: ForecastData, index: number): DayDetail {
       time,
       temperature: hourly.temperatures[i],
       heatIndex: hourly.heatIndex?.[i] ?? hourly.temperatures[i],
+      dewPoint: hourly.dewPoint?.[i] ?? hourly.temperatures[i],
       humidity: hourly.humidity[i],
       precipProbability: hourly.precipProbability[i],
       weatherCode: hourly.weatherCodes[i],
@@ -359,6 +391,7 @@ export function getDayDetail(forecast: ForecastData, index: number): DayDetail {
     tempMin: daily.tempMin[index],
     feelsLikeMax: daily.feelsLikeMax[index],
     heatIndexMax: daily.heatIndexMax?.[index] ?? daily.tempMax[index],
+    dewPointMax: daily.dewPointMax?.[index] ?? daily.tempMin[index],
     precipProbability: daily.precipProbability[index],
     precipSum: daily.precipSum[index],
     windSpeedMax: daily.windSpeedMax[index],

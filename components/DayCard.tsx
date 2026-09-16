@@ -19,6 +19,7 @@ export function DayCard({
   tempMin,
   feelsLikeMax,
   heatIndexMax,
+  dewPointMax,
   precip,
   wind,
   windDirection,
@@ -34,6 +35,7 @@ export function DayCard({
   tempMin: number;
   feelsLikeMax: number;
   heatIndexMax: number;
+  dewPointMax: number;
   precip: number;
   wind: number;
   windDirection: number | null;
@@ -93,6 +95,13 @@ export function DayCard({
           title="Heat index"
         >
           HI {Math.round(heatIndexMax)}
+          {unitLabel}
+        </span>
+        <span
+          className="text-[10px] text-text-muted tabular-nums"
+          title="Dew point"
+        >
+          DP {Math.round(dewPointMax)}
           {unitLabel}
         </span>
       </div>

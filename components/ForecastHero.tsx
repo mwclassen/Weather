@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Droplets, Navigation, Star, ThermometerSun, Wind } from "lucide-react";
+import { Droplet, Droplets, Navigation, Star, ThermometerSun, Wind } from "lucide-react";
 import {
   formatCityLabel,
   formatTime,
@@ -152,13 +152,23 @@ export function ForecastHero({
             <Droplets className="w-3.5 h-3.5 text-accent-dim" />
             {current.humidity}% humidity
           </span>
-          <span
-            className="flex items-center gap-1.5"
-            title="Heat index from air temperature and humidity"
-          >
-            <ThermometerSun className="w-3.5 h-3.5 text-accent-dim" />
-            Heat index {Math.round(current.heatIndex ?? current.temperature)}
-            {unitLabel}
+          <span className="flex flex-col gap-1">
+            <span
+              className="flex items-center gap-1.5"
+              title="Heat index from air temperature and humidity"
+            >
+              <ThermometerSun className="w-3.5 h-3.5 text-accent-dim" />
+              Heat index {Math.round(current.heatIndex ?? current.temperature)}
+              {unitLabel}
+            </span>
+            <span
+              className="flex items-center gap-1.5"
+              title="Dew point from air temperature and humidity"
+            >
+              <Droplet className="w-3.5 h-3.5 text-accent-dim" />
+              Dew point {Math.round(current.dewPoint ?? current.temperature)}
+              {unitLabel}
+            </span>
           </span>
           <span
             className="flex items-center gap-1.5"
