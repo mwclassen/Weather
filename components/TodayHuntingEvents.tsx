@@ -28,7 +28,12 @@ export function TodayHuntingEvents({ forecast }: { forecast: ForecastData }) {
       ? forecast.daily.sunrise[todayIndex + 1]
       : undefined;
 
-  const metrics = getDaylightMetrics(detail.sunrise, detail.sunset);
+  const metrics = getDaylightMetrics(
+    detail.sunrise,
+    detail.sunset,
+    detail.firstLight,
+    detail.lastLight
+  );
   const hunting = getHuntingWindow(detail.sunrise, detail.sunset);
   const nextHuntStart = nextDaySunrise
     ? offsetIsoTime(nextDaySunrise, -HUNTING_START_BEFORE_SUNRISE_MIN)
@@ -161,6 +166,11 @@ export function TodayHuntingEvents({ forecast }: { forecast: ForecastData }) {
               title="Legal hunting window"
             />
             <div
+              className="absolute top-0 bottom-0 w-px bg-warning/40 z-[3]"
+              style={{ left: `${metrics.firstLightPercent}%` }}
+              title="First light"
+            />
+            <div
               className="absolute top-0 bottom-0 w-px bg-warning/70 z-[3]"
               style={{ left: `${metrics.sunrisePercent}%` }}
               title="Sunrise"
@@ -169,6 +179,11 @@ export function TodayHuntingEvents({ forecast }: { forecast: ForecastData }) {
               className="absolute top-0 bottom-0 w-px bg-orange-400/70 z-[3]"
               style={{ left: `${metrics.sunsetPercent}%` }}
               title="Sunset"
+            />
+            <div
+              className="absolute top-0 bottom-0 w-px bg-orange-400/40 z-[3]"
+              style={{ left: `${metrics.lastLightPercent}%` }}
+              title="Last light"
             />
           </div>
 
@@ -196,11 +211,17 @@ export function TodayHuntingEvents({ forecast }: { forecast: ForecastData }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 pt-4 border-t border-border/60">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-5 pt-4 border-t border-border/60">
           <div className="font-mono text-xs">
             <span className="text-text-dim">Hunt start</span>
             <p className="text-text mt-0.5 tabular-nums">
               {formatTime(hunting.startIso, timezone)}
+            </p>
+          </div>
+          <div className="font-mono text-xs">
+            <span className="text-text-dim">First light</span>
+            <p className="text-text mt-0.5 tabular-nums">
+              {formatTime(detail.firstLight, timezone)}
             </p>
           </div>
           <div className="font-mono text-xs">
@@ -216,6 +237,12 @@ export function TodayHuntingEvents({ forecast }: { forecast: ForecastData }) {
             </p>
           </div>
           <div className="font-mono text-xs">
+            <span className="text-text-dim">Last light</span>
+            <p className="text-text mt-0.5 tabular-nums">
+              {formatTime(detail.lastLight, timezone)}
+            </p>
+          </div>
+          <div className="font-mono text-xs">
             <span className="text-text-dim">Hunt end</span>
             <p className="text-text mt-0.5 tabular-nums">
               {formatTime(hunting.endIso, timezone)}
@@ -225,7 +252,8 @@ export function TodayHuntingEvents({ forecast }: { forecast: ForecastData }) {
 
         <p className="font-mono text-[10px] text-text-dim mt-4">
           Window spans ~{Math.round(huntStartPct)}%–{Math.round(huntEndPct)}% of
-          the day on the timeline above. Markers show sunrise and sunset.
+          the day on the timeline above. Markers show first light, sunrise,
+          sunset, and last light.
         </p>
       </div>
     </section>

@@ -13,6 +13,7 @@ import {
   ChevronRight,
   Navigation,
   Droplet,
+  Sunrise,
 } from "lucide-react";
 import {
   formatDateLong,
@@ -233,6 +234,24 @@ export function DayDetailPanel({
               label="UV index"
               value={String(Math.round(detail.uvIndexMax ?? 0))}
             />
+          </div>
+
+          <div className="rounded-lg border border-border bg-bg-card px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div className="flex items-center gap-2 text-accent-dim">
+              <Sunrise className="w-4 h-4 shrink-0" />
+              <p className="font-mono text-[10px] text-text-dim uppercase tracking-wider">
+                First light → last light
+              </p>
+            </div>
+            <p className="font-mono text-sm text-text tabular-nums">
+              {formatTime(detail.firstLight, timezone)}
+              <span className="text-text-dim mx-2">→</span>
+              {formatTime(detail.lastLight, timezone)}
+            </p>
+            <p className="font-mono text-xs text-text-muted">
+              Sunrise {formatTime(detail.sunrise, timezone)} · Sunset{" "}
+              {formatTime(detail.sunset, timezone)}
+            </p>
           </div>
 
           {detail.hourly.length > 0 && (

@@ -162,3 +162,21 @@ body {
 .timeline-night {
   background-color: var(--timeline-night);
 }
+
+.twilight-gradient {
+  background: linear-gradient(
+    180deg,
+    #121820 0%,
+    #2a3544 40%,
+    #c9a22744 100%
+  );
+}
+
+[data-theme="light"] .twilight-gradient {
+  background: linear-gradient(
+    180deg,
+    #c5d0dc 0%,
+    #9eb3c7 40%,
+    #e0b84d55 100%
+  );
+}

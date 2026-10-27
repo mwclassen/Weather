@@ -227,6 +227,8 @@ export interface DayDetail {
   uvIndexMax: number;
   sunrise: string;
   sunset: string;
+  firstLight: string;
+  lastLight: string;
   hourly: {
     time: string;
     temperature: number;
@@ -399,6 +401,12 @@ export function getDayDetail(forecast: ForecastData, index: number): DayDetail {
     uvIndexMax: daily.uvIndexMax[index],
     sunrise: daily.sunrise[index],
     sunset: daily.sunset[index],
+    ...getFirstLastLight(
+      forecast,
+      date,
+      daily.sunrise[index],
+      daily.sunset[index]
+    ),
     hourly: slots,
   };
 }
@@ -430,26 +438,45 @@ export function parseLocalTimeMinutes(isoTime: string): number {
 export interface DaylightMetrics {
   sunriseMinutes: number;
   sunsetMinutes: number;
+  firstLightMinutes: number;
+  lastLightMinutes: number;
   daylightMinutes: number;
+  usableLightMinutes: number;
   nightMinutes: number;
   daylightHours: number;
   /** 0–100 position on a 24h bar */
   sunrisePercent: number;
   sunsetPercent: number;
+  firstLightPercent: number;
+  lastLightPercent: number;
   daylightPercent: number;
+  usableLightPercent: number;
 }
 
 export function getDaylightMetrics(
   sunrise: string,
-  sunset: string
+  sunset: string,
+  firstLight?: string,
+  lastLight?: string
 ): DaylightMetrics {
   const dayMinutes = 24 * 60;
   const sunriseMinutes = parseLocalTimeMinutes(sunrise);
   const sunsetMinutes = parseLocalTimeMinutes(sunset);
+  const firstLightMinutes = firstLight
+    ? parseLocalTimeMinutes(firstLight)
+    : sunriseMinutes;
+  const lastLightMinutes = lastLight
+    ? parseLocalTimeMinutes(lastLight)
+    : sunsetMinutes;
 
   let daylightMinutes = sunsetMinutes - sunriseMinutes;
   if (daylightMinutes < 0) {
     daylightMinutes += dayMinutes;
+  }
+
+  let usableLightMinutes = lastLightMinutes - firstLightMinutes;
+  if (usableLightMinutes < 0) {
+    usableLightMinutes += dayMinutes;
   }
 
   const nightMinutes = dayMinutes - daylightMinutes;
@@ -457,13 +484,213 @@ export function getDaylightMetrics(
   return {
     sunriseMinutes,
     sunsetMinutes,
+    firstLightMinutes,
+    lastLightMinutes,
     daylightMinutes,
+    usableLightMinutes,
     nightMinutes,
     daylightHours: daylightMinutes / 60,
     sunrisePercent: (sunriseMinutes / dayMinutes) * 100,
     sunsetPercent: (sunsetMinutes / dayMinutes) * 100,
+    firstLightPercent: (firstLightMinutes / dayMinutes) * 100,
+    lastLightPercent: (lastLightMinutes / dayMinutes) * 100,
     daylightPercent: (daylightMinutes / dayMinutes) * 100,
+    usableLightPercent: (usableLightMinutes / dayMinutes) * 100,
   };
+}
+
+const CIVIL_TWILIGHT_ZENITH = 96;
+
+function sinDeg(degrees: number): number {
+  return Math.sin((degrees * Math.PI) / 180);
+}
+function cosDeg(degrees: number): number {
+  return Math.cos((degrees * Math.PI) / 180);
+}
+function tanDeg(degrees: number): number {
+  return Math.tan((degrees * Math.PI) / 180);
+}
+function acosDeg(value: number): number {
+  return (Math.acos(value) * 180) / Math.PI;
+}
+function asinDeg(value: number): number {
+  return (Math.asin(value) * 180) / Math.PI;
+}
+function atanDeg(value: number): number {
+  return (Math.atan(value) * 180) / Math.PI;
+}
+
+function wrapDegrees(value: number): number {
+  const n = value % 360;
+  return n < 0 ? n + 360 : n;
+}
+
+function wrapHours(value: number): number {
+  const n = value % 24;
+  return n < 0 ? n + 24 : n;
+}
+
+function dayOfYear(year: number, month: number, day: number): number {
+  const n1 = Math.floor((275 * month) / 9);
+  const n2 = Math.floor((month + 9) / 12);
+  const n3 = 1 + Math.floor((year - 4 * Math.floor(year / 4) + 2) / 3);
+  return n1 - n2 * n3 + day - 30;
+}
+
+/** NOAA/USNO solar event in UTC hours, or null if the sun never crosses zenith. */
+function solarEventUtcHours(
+  latitude: number,
+  longitude: number,
+  year: number,
+  month: number,
+  day: number,
+  zenith: number,
+  rising: boolean
+): number | null {
+  const N = dayOfYear(year, month, day);
+  const lngHour = longitude / 15;
+  const t = rising ? N + (6 - lngHour) / 24 : N + (18 - lngHour) / 24;
+
+  const M = 0.9856 * t - 3.289;
+  let L = M + 1.916 * sinDeg(M) + 0.02 * sinDeg(2 * M) + 282.634;
+  L = wrapDegrees(L);
+
+  let rightAscension = atanDeg(0.91764 * tanDeg(L));
+  rightAscension = wrapDegrees(rightAscension);
+  const Lquadrant = Math.floor(L / 90) * 90;
+  const RAquadrant = Math.floor(rightAscension / 90) * 90;
+  rightAscension = (rightAscension + (Lquadrant - RAquadrant)) / 15;
+
+  const sinDec = 0.39782 * sinDeg(L);
+  const cosDec = cosDeg(asinDeg(sinDec));
+  const cosH =
+    (cosDeg(zenith) - sinDec * sinDeg(latitude)) / (cosDec * cosDeg(latitude));
+
+  if (cosH > 1 || cosH < -1 || Number.isNaN(cosH)) return null;
+
+  let H = rising ? 360 - acosDeg(cosH) : acosDeg(cosH);
+  H /= 15;
+
+  const T = H + rightAscension - 0.06571 * t - 6.622;
+  return wrapHours(T - lngHour);
+}
+
+function formatUtcOffset(seconds: number): string {
+  const sign = seconds >= 0 ? "+" : "-";
+  const abs = Math.abs(seconds);
+  const h = Math.floor(abs / 3600);
+  const m = Math.floor((abs % 3600) / 60);
+  return `${sign}${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+function utcHoursToOffsetIso(
+  date: string,
+  utcHours: number,
+  utcOffsetSeconds: number
+): string {
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  let totalSeconds = Math.round(utcHours * 3600) + utcOffsetSeconds;
+  while (totalSeconds < 0) totalSeconds += 86400;
+  while (totalSeconds >= 86400) totalSeconds -= 86400;
+
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+
+  return `${date}T${pad(hours)}:${pad(minutes)}:00${formatUtcOffset(utcOffsetSeconds)}`;
+}
+
+export function shiftDateString(date: string, days: number): string {
+  const [year, month, day] = date.split("-").map(Number);
+  const wall = new Date(Date.UTC(year, month - 1, day + days));
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return `${wall.getUTCFullYear()}-${pad(wall.getUTCMonth() + 1)}-${pad(wall.getUTCDate())}`;
+}
+
+export interface CivilTwilight {
+  firstLight: string;
+  lastLight: string;
+}
+
+/** Civil dawn / dusk (sun 6° below the horizon). */
+export function computeCivilTwilight(
+  latitude: number,
+  longitude: number,
+  date: string,
+  utcOffsetSeconds: number
+): CivilTwilight | null {
+  const parts = date.split("-").map(Number);
+  if (parts.length !== 3 || parts.some((n) => Number.isNaN(n))) return null;
+  const [year, month, day] = parts;
+
+  const dawn = solarEventUtcHours(
+    latitude,
+    longitude,
+    year,
+    month,
+    day,
+    CIVIL_TWILIGHT_ZENITH,
+    true
+  );
+  const dusk = solarEventUtcHours(
+    latitude,
+    longitude,
+    year,
+    month,
+    day,
+    CIVIL_TWILIGHT_ZENITH,
+    false
+  );
+  if (dawn == null || dusk == null) return null;
+
+  return {
+    firstLight: utcHoursToOffsetIso(date, dawn, utcOffsetSeconds),
+    lastLight: utcHoursToOffsetIso(date, dusk, utcOffsetSeconds),
+  };
+}
+
+export function getFirstLastLight(
+  forecast: Pick<ForecastData, "latitude" | "longitude" | "utcOffsetSeconds">,
+  date: string,
+  sunrise: string,
+  sunset: string
+): CivilTwilight {
+  const twilight = computeCivilTwilight(
+    forecast.latitude,
+    forecast.longitude,
+    date,
+    forecast.utcOffsetSeconds
+  );
+  return {
+    firstLight:
+      twilight?.firstLight ??
+      offsetIsoTime(sunrise, -HUNTING_START_BEFORE_SUNRISE_MIN),
+    lastLight:
+      twilight?.lastLight ??
+      offsetIsoTime(sunset, HUNTING_END_AFTER_SUNSET_MIN),
+  };
+}
+
+export function getNextUpcomingEvent<T extends string>(
+  candidates: { type: T; isoTime: string; label: string }[],
+  date: string,
+  timezone: string
+): { type: T; isoTime: string; minutesUntil: number; label: string } | null {
+  const now = Date.now();
+  const todayStr = getTodayDateString(timezone);
+  if (date < todayStr) return null;
+
+  for (const event of candidates) {
+    const ms = new Date(event.isoTime).getTime();
+    if (Number.isNaN(ms) || ms <= now) continue;
+    return {
+      type: event.type,
+      isoTime: event.isoTime,
+      minutesUntil: Math.round((ms - now) / 60000),
+      label: event.label,
+    };
+  }
+
+  return null;
 }
 
 export function formatDuration(minutes: number): string {

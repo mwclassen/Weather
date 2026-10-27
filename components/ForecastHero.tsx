@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Droplet, Droplets, Navigation, Star, ThermometerSun, Wind } from "lucide-react";
+import { Droplet, Droplets, Navigation, Star, Sunrise, ThermometerSun, Wind } from "lucide-react";
 import {
   formatCityLabel,
   formatTime,
   formatWind,
   formatWindDirection,
+  getDayDetail,
   getLocationCurrentWeather,
+  getTodayForecastIndex,
   temperatureUnitLabel,
   weatherCodeToIcon,
   weatherCodeToLabel,
@@ -41,6 +43,10 @@ export function ForecastHero({
   const current = getLocationCurrentWeather(forecast);
   const unitLabel = temperatureUnitLabel(unit);
   const localTime = useLiveLocalTime(timezone);
+  const today = getDayDetail(
+    forecast,
+    getTodayForecastIndex(forecast, timezone)
+  );
 
   return (
     <header className="rounded-xl border border-border bg-bg-card/80 backdrop-blur p-6 sm:p-8">
@@ -187,6 +193,15 @@ export function ForecastHero({
                 aria-hidden
               />
             )}
+          </span>
+          <span
+            className="flex items-center gap-1.5"
+            title="Civil twilight: first light to last light"
+          >
+            <Sunrise className="w-3.5 h-3.5 text-accent-dim" />
+            First light {formatTime(today.firstLight, timezone)}
+            <span className="text-text-dim">→</span>
+            Last light {formatTime(today.lastLight, timezone)}
           </span>
           <a
             href={getDeviceMapUrl(
